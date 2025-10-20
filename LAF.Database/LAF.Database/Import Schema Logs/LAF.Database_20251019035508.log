@@ -1,0 +1,88 @@
+2025-10-19 16:55:08	This log contains information about the import schema operation into project 'LAF.Database' on computer 'CUSTOM-PC' by user 'shiva'.
+2025-10-19 16:55:08	Import of database schema has started.
+2025-10-19 16:55:13	Gathering database credentials
+2025-10-19 16:55:13	Gathering database options
+2025-10-19 16:55:13	Gathering generic database scoped configuration option
+2025-10-19 16:55:13	Gathering users
+2025-10-19 16:55:13	Gathering roles
+2025-10-19 16:55:13	Gathering application roles
+2025-10-19 16:55:13	Gathering role memberships
+2025-10-19 16:55:13	Gathering filegroups
+2025-10-19 16:55:13	Gathering full-text catalogs
+2025-10-19 16:55:13	Gathering assemblies
+2025-10-19 16:55:13	Gathering certificates
+2025-10-19 16:55:13	Gathering asymmetric keys
+2025-10-19 16:55:13	Gathering symmetric keys
+2025-10-19 16:55:13	Gathering encrypted symmetric keys
+2025-10-19 16:55:13	Gathering schemas
+2025-10-19 16:55:13	Gathering XML schema collections
+2025-10-19 16:55:13	Gathering user-defined data types
+2025-10-19 16:55:13	Gathering user-defined types
+2025-10-19 16:55:13	Gathering table types
+2025-10-19 16:55:13	Gathering unique keys for table types
+2025-10-19 16:55:13	Gathering primary keys for table types
+2025-10-19 16:55:14	Gathering indexes for table types
+2025-10-19 16:55:14	Gathering check constraints for table types
+2025-10-19 16:55:14	Gathering default constraints for table types
+2025-10-19 16:55:14	Gathering partition functions
+2025-10-19 16:55:14	Gathering partition schemes
+2025-10-19 16:55:14	Gathering functions
+2025-10-19 16:55:14	Gathering encrypted functions
+2025-10-19 16:55:14	Gathering aggregates
+2025-10-19 16:55:14	Gathering procedures
+2025-10-19 16:55:14	Gathering encrypted procedures
+2025-10-19 16:55:14	Gathering tables
+2025-10-19 16:55:14	Gathering primary keys
+2025-10-19 16:55:14	Gathering unique constraints
+2025-10-19 16:55:14	Gathering foreign keys
+2025-10-19 16:55:14	Gathering default constraints
+2025-10-19 16:55:14	Gathering check constraints
+2025-10-19 16:55:14	Gathering views
+2025-10-19 16:55:14	Gathering encrypted views
+2025-10-19 16:55:14	Gathering indexes
+2025-10-19 16:55:14	Gathering statistics
+2025-10-19 16:55:14	Gathering full-text index stoplists
+2025-10-19 16:55:14	Gathering search property lists
+2025-10-19 16:55:14	Gathering search properties
+2025-10-19 16:55:14	Gathering full-text indexes
+2025-10-19 16:55:14	Gathering column store indexes
+2025-10-19 16:55:14	Gathering spatial indexes
+2025-10-19 16:55:14	Gathering XML indexes
+2025-10-19 16:55:14	Gathering Selective XML indexes
+2025-10-19 16:55:14	Gathering encrypted triggers
+2025-10-19 16:55:14	Gathering triggers
+2025-10-19 16:55:14	Gathering encrypted and clr ddl triggers
+2025-10-19 16:55:14	Gathering ddl triggers
+2025-10-19 16:55:14	Creating edge constraints
+2025-10-19 16:55:14	Gathering synonyms
+2025-10-19 16:55:14	Gathering defaults
+2025-10-19 16:55:14	Gathering data constraint uddt bindings
+2025-10-19 16:55:14	Gathering rules
+2025-10-19 16:55:14	Gathering data constraint uddt bindings
+2025-10-19 16:55:14	Gathering message types
+2025-10-19 16:55:14	Gathering queues
+2025-10-19 16:55:14	Gathering contracts
+2025-10-19 16:55:14	Gathering services
+2025-10-19 16:55:14	Gathering event notifications
+2025-10-19 16:55:14	Gathering remote service bindings
+2025-10-19 16:55:14	Gathering broker priorities
+2025-10-19 16:55:14	Gathering signatures
+2025-10-19 16:55:14	Gathering compression options
+2025-10-19 16:55:14	Gathering sequence types
+2025-10-19 16:55:14	Gathering security policies
+2025-10-19 16:55:14	Gather column encryption keys
+2025-10-19 16:55:14	Gathering column master keys
+2025-10-19 16:55:14	Gathering external data sources
+2025-10-19 16:55:14	Gathering external file formats
+2025-10-19 16:55:14	Gathering external tables
+2025-10-19 16:55:14	Gathering XML index compression options
+2025-10-19 16:55:14	Gathering extended properties
+2025-10-19 16:55:14	Gathering assemblies
+2025-10-19 16:55:15	Gathering credentials
+2025-10-19 16:55:15	Gathering logins
+2025-10-19 16:55:15	Gathering server audits
+2025-10-19 16:55:15	Scanning project for duplicate elements
+2025-10-19 16:55:15	Finished duplicate element processing
+2025-10-19 16:55:16	Finished importing database.
+2025-10-19 16:55:16	A summary of the import was saved to the following location: C:\Work\LAF\LAF.Database\LAF.Database\Import Schema Logs\LAF.Database_20251019035508.log
+2025-10-19 16:55:16	Click Finish to continue...

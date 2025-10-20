@@ -1,0 +1,6 @@
+@LAF.WebApi_HostAddress = http://localhost:5007
+
+GET {{LAF.WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

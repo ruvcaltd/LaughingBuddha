@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LAF.DataAccess\LAF.DataAccess.csproj" />
+    <ProjectReference Include="..\LAF.Dtos\LAF.Dtos.csproj" />
+    <ProjectReference Include="..\LAF.Service.Interfaces\LAF.Services.Interfaces.csproj" />
+  </ItemGroup>
+
+</Project>
