@@ -27,16 +27,6 @@ namespace LAF.Services.Repositories
                 .FirstOrDefaultAsync(rr => rr.Id == id);
         }
 
-        public async Task<IEnumerable<RepoRate>> GetAllAsync()
-        {
-            return await _context.RepoRates
-                .Include(rr => rr.Counterparty)
-                .Include(rr => rr.CollateralType)
-                .OrderByDescending(rr => rr.EffectiveDate)
-                .ThenBy(rr => rr.Counterparty.CounterpartyName)
-                .ToListAsync();
-        }
-
         public async Task<IEnumerable<RepoRate>> FindAsync(Expression<Func<RepoRate, bool>> predicate)
         {
             return await _context.RepoRates
@@ -50,6 +40,8 @@ namespace LAF.Services.Repositories
 
         public async Task<RepoRate> AddAsync(RepoRate repoRate)
         {
+            var found = await FindAsync(r => r.CollateralTypeId == repoRate.CollateralTypeId && r.CounterpartyId == repoRate.CounterpartyId && r.EffectiveDate == repoRate.EffectiveDate);
+            if (found.Any()) return found.First();
             _context.RepoRates.Add(repoRate);
             await _context.SaveChangesAsync();
             return repoRate;
@@ -76,18 +68,21 @@ namespace LAF.Services.Repositories
             return await _context.RepoRates
                 .Include(rr => rr.Counterparty)
                 .Include(rr => rr.CollateralType)
-                .FirstOrDefaultAsync(rr => 
-                    rr.CounterpartyId == counterpartyId && 
-                    rr.CollateralTypeId == collateralTypeId && 
+                .FirstOrDefaultAsync(rr =>
+                    rr.CounterpartyId == counterpartyId &&
+                    rr.CollateralTypeId == collateralTypeId &&
                     rr.EffectiveDate == repoDate);
         }
 
-        public async Task<IEnumerable<RepoRate>> GetRepoRatesByDateAsync(DateTime repoDate)
+        public async Task<IEnumerable<RepoRate>> GetRepoRatesByDateAsync(DateTime repoDate, bool returnPreviousDayIfNotAvailable)
         {
+            var previousDay = await _context.RepoRates.OrderByDescending(x => x.EffectiveDate).FirstOrDefaultAsync();
+            var date = returnPreviousDayIfNotAvailable && previousDay != null ? previousDay.EffectiveDate : repoDate.Date;
+
             return await _context.RepoRates
                 .Include(rr => rr.Counterparty)
                 .Include(rr => rr.CollateralType)
-                .Where(rr => rr.EffectiveDate == repoDate)
+                .Where(rr => rr.EffectiveDate.Date == date.Date)
                 .OrderBy(rr => rr.Counterparty.CounterpartyName)
                 .ToListAsync();
         }
@@ -102,11 +97,22 @@ namespace LAF.Services.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<RepoRate>> GetRepoRatesByDateRangeAsync(DateTime fromDate, DateTime toDate)
+        {
+            return await _context.RepoRates
+                .Include(rr => rr.Counterparty)
+                .Include(rr => rr.CollateralType)
+                .Where(rr => rr.EffectiveDate >= fromDate.Date && rr.EffectiveDate <= toDate.Date)
+                .OrderByDescending(rr => rr.EffectiveDate)
+                .ThenBy(rr => rr.Counterparty.CounterpartyName)
+                .ToListAsync();
+        }
+
         public async Task<bool> RepoRateExistsAsync(int counterpartyId, int collateralTypeId, DateTime repoDate)
         {
-            return await _context.RepoRates.AnyAsync(rr => 
-                rr.CounterpartyId == counterpartyId && 
-                rr.CollateralTypeId == collateralTypeId && 
+            return await _context.RepoRates.AnyAsync(rr =>
+                rr.CounterpartyId == counterpartyId &&
+                rr.CollateralTypeId == collateralTypeId &&
                 rr.EffectiveDate == repoDate);
         }
     }

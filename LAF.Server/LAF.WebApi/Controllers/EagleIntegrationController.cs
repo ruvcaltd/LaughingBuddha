@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using LAF.Dtos;
 using LAF.Service.Interfaces.Services;
+using System.Security.Claims;
 
 namespace LAF.WebApi.Controllers
 {
@@ -36,7 +37,7 @@ namespace LAF.WebApi.Controllers
                 }
 
                 // Get user ID from claims
-                var userIdClaim = User.FindFirst("userId")?.Value;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; ;
                 if (!int.TryParse(userIdClaim, out int userId))
                 {
                     return Unauthorized(new { error = "Invalid user authentication" });
@@ -71,7 +72,7 @@ namespace LAF.WebApi.Controllers
                 }
 
                 // Get user ID from claims
-                var userIdClaim = User.FindFirst("userId")?.Value;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; ;
                 if (!int.TryParse(userIdClaim, out int userId))
                 {
                     return Unauthorized(new { error = "Invalid user authentication" });
@@ -101,7 +102,7 @@ namespace LAF.WebApi.Controllers
                 }
 
                 // Get user ID from claims
-                var userIdClaim = User.FindFirst("userId")?.Value;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; ;
                 if (!int.TryParse(userIdClaim, out int userId))
                 {
                     return Unauthorized(new { error = "Invalid user authentication" });
@@ -168,7 +169,7 @@ namespace LAF.WebApi.Controllers
             try
             {
                 // Get user ID from claims
-                var userIdClaim = User.FindFirst("userId")?.Value;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; ;
                 if (!int.TryParse(userIdClaim, out int userId))
                 {
                     return Unauthorized(new { error = "Invalid user authentication" });

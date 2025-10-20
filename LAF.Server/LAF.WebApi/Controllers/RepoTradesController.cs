@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using LAF.Dtos;
 using LAF.Service.Interfaces.Services;
+using System.Security.Claims;
 
 namespace LAF.WebApi.Controllers
 {
@@ -66,6 +67,7 @@ namespace LAF.WebApi.Controllers
         public async Task<ActionResult<IEnumerable<RepoTradeDto>>> SearchTrades([FromQuery] RepoTradeQueryDto query)
         {
             try
+
             {
                 var trades = await _repoTradeService.FindAsync(query);
                 return Ok(trades);
@@ -123,6 +125,7 @@ namespace LAF.WebApi.Controllers
         }
 
         [HttpPost]
+        [ProducesResponseType(typeof(RepoRateDto), StatusCodes.Status201Created)] // important for nswag code gen
         public async Task<ActionResult<RepoTradeDto>> CreateTrade([FromBody] CreateRepoTradeDto createDto)
         {
             try
@@ -133,7 +136,7 @@ namespace LAF.WebApi.Controllers
                 }
 
                 // Get user ID from claims (assuming it's stored in the JWT token)
-                var userIdClaim = User.FindFirst("userId")?.Value;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; ;
                 if (!int.TryParse(userIdClaim, out int userId))
                 {
                     return Unauthorized(new { error = "Invalid user authentication" });
@@ -172,7 +175,7 @@ namespace LAF.WebApi.Controllers
                 }
 
                 // Get user ID from claims
-                var userIdClaim = User.FindFirst("userId")?.Value;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; ;
                 if (!int.TryParse(userIdClaim, out int userId))
                 {
                     return Unauthorized(new { error = "Invalid user authentication" });
@@ -205,7 +208,7 @@ namespace LAF.WebApi.Controllers
             try
             {
                 // Get user ID from claims
-                var userIdClaim = User.FindFirst("userId")?.Value;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; ;
                 if (!int.TryParse(userIdClaim, out int userId))
                 {
                     return Unauthorized(new { error = "Invalid user authentication" });
@@ -236,7 +239,7 @@ namespace LAF.WebApi.Controllers
             try
             {
                 // Get user ID from claims
-                var userIdClaim = User.FindFirst("userId")?.Value;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; ;
                 if (!int.TryParse(userIdClaim, out int userId))
                 {
                     return Unauthorized(new { error = "Invalid user authentication" });
@@ -267,7 +270,7 @@ namespace LAF.WebApi.Controllers
             try
             {
                 // Get user ID from claims
-                var userIdClaim = User.FindFirst("userId")?.Value;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; ;
                 if (!int.TryParse(userIdClaim, out int userId))
                 {
                     return Unauthorized(new { error = "Invalid user authentication" });
@@ -298,7 +301,7 @@ namespace LAF.WebApi.Controllers
             try
             {
                 // Get user ID from claims
-                var userIdClaim = User.FindFirst("userId")?.Value;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; ;
                 if (!int.TryParse(userIdClaim, out int userId))
                 {
                     return Unauthorized(new { error = "Invalid user authentication" });
@@ -345,8 +348,8 @@ namespace LAF.WebApi.Controllers
 
         [HttpPost("validate-target-circle")]
         public async Task<ActionResult<TargetCircleValidationDto>> ValidateTargetCircle(
-            [FromQuery] int counterpartyId, 
-            [FromQuery] DateTime tradeDate, 
+            [FromQuery] int counterpartyId,
+            [FromQuery] DateTime tradeDate,
             [FromQuery] decimal proposedNotional)
         {
             try

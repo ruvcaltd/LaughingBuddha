@@ -74,7 +74,7 @@ Install dotnet tool:
 dotnet tool install --global Nswag.ConsoleCore
 
 Run
-nswag openapi2tsclient /input:https://localhost:7202/swagger/v1/swagger.json /output:src/app/api/client.ts
+nswag run nswag.json
 
 
 

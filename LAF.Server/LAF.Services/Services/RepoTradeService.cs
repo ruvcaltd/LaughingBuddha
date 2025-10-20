@@ -62,13 +62,15 @@ namespace LAF.Services.Services
         public async Task<IEnumerable<RepoTradeDto>> FindAsync(RepoTradeQueryDto query)
         {
             var trades = await _repoTradeRepository.FindAsync(trade =>
-                (!query.FundId.HasValue || trade.FundId == query.FundId.Value) &&
-                (!query.CounterpartyId.HasValue || trade.CounterpartyId == query.CounterpartyId.Value) &&
-                (!query.StartDateFrom.HasValue || trade.StartDate.Value.DateTime >= query.StartDateFrom.Value) &&
-                (!query.StartDateTo.HasValue || trade.StartDate.Value.DateTime <= query.StartDateTo.Value) &&
-                (!query.SettlementDate.HasValue || trade.TradeDate == query.SettlementDate.Value) &&
-                (string.IsNullOrEmpty(query.Status) || trade.Status == query.Status) &&
-                (string.IsNullOrEmpty(query.Direction) || trade.Direction == query.Direction));
+                 (!query.FundId.HasValue || trade.FundId == query.FundId.Value) &&
+                 (!query.CounterpartyId.HasValue || trade.CounterpartyId == query.CounterpartyId.Value) &&
+                 (!query.StartDateFrom.HasValue || trade.StartDate >= query.StartDateFrom.Value) &&
+                 (!query.StartDateTo.HasValue || trade.StartDate <= query.StartDateTo.Value) &&
+                 (!query.SettlementDate.HasValue || trade.TradeDate == query.SettlementDate.Value) &&
+                 (string.IsNullOrEmpty(query.Status) || trade.Status == query.Status) &&
+                 (string.IsNullOrEmpty(query.Direction) || trade.Direction == query.Direction)
+             );
+
 
             return RepoTradeMapper.ToDtoList(trades);
         }
@@ -88,7 +90,7 @@ namespace LAF.Services.Services
                 // Check TargetCircle limits
                 var targetCircleValidation = await _targetCircleService.ValidateTradeAgainstTargetCircleAsync(
                     createDto.CounterpartyId, createDto.StartDate, createDto.Notional);
-                
+
                 if (!targetCircleValidation.IsWithinLimit)
                 {
                     throw new InvalidOperationException(targetCircleValidation.ValidationMessage);
@@ -378,7 +380,7 @@ namespace LAF.Services.Services
         private async Task CreateTradeSettlementCashflow(RepoTrade trade)
         {
             var cashflowAmount = trade.Direction == "Lend" ? -trade.Notional : trade.Notional;
-            
+
             var cashflowDto = new CreateCashflowDto
             {
                 CashAccountId = trade.FundId ?? 0, // Assuming fund has a cash account with same ID
@@ -400,7 +402,7 @@ namespace LAF.Services.Services
             var startDate = trade.StartDate?.DateTime ?? trade.TradeDate;
             var endDate = trade.MaturityDate;
             var days = (endDate - startDate).Days;
-            var maturityAmount = trade.Direction == "Lend" 
+            var maturityAmount = trade.Direction == "Lend"
                 ? trade.Notional + (trade.Notional * trade.Rate / 100 * days / 365)
                 : -(trade.Notional + (trade.Notional * trade.Rate / 100 * days / 365));
 

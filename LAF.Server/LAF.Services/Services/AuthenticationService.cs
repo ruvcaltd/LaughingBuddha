@@ -37,7 +37,8 @@ public class AuthenticationService : IAuthenticationService
         {
             Token = token,
             Email = user.Email,
-            DisplayName = user.DisplayName
+            DisplayName = user.DisplayName,
+            UserId = user.Id
         };
     }
 

@@ -1,1 +1,92 @@
-/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* AG Grid core styles and Balham theme */
+/* DevExtreme core styles */
+@import 'devextreme/dist/css/dx.light.compact.css';
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* AG Grid Balham theme customization */
+.ag-theme-balham {
+  --ag-background-color: #ffffff;
+  --ag-foreground-color: #000;
+  --ag-header-background-color: #f5f7f7;
+  --ag-odd-row-background-color: #fcfdfe;
+  --ag-header-foreground-color: #000;
+  --ag-border-color: #BDC3C7;
+}
+
+/* AG Grid Balham dark blue theme */
+:root.dark .ag-theme-balham {
+  --ag-background-color: #1a2035;
+  --ag-foreground-color: #ffffff;
+  --ag-header-background-color: #202940;
+  --ag-odd-row-background-color: #1f2940;
+  --ag-header-foreground-color: #ffffff;
+  --ag-border-color: #2e3650;
+  --ag-row-hover-color: rgba(46, 54, 80, 0.4);
+  --ag-column-hover-color: rgba(46, 54, 80, 0.3);
+  --ag-input-focus-box-shadow: 0 0 2px 0.5px rgba(255, 255, 255, 0.5);
+  --ag-range-selection-background-color: rgba(0, 176, 255, 0.2);
+  --ag-selected-row-background-color: rgba(0, 176, 255, 0.1);
+}
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-2 py-1 text-xs font-medium border transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-primary {
+    @apply bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white hover:bg-gray-800 dark:hover:bg-gray-100;
+  }
+  
+  .btn-secondary {
+    @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700;
+  }
+  
+  .btn-success {
+    @apply bg-green-700 dark:bg-green-600 text-white border-green-700 dark:border-green-600 hover:bg-green-800 dark:hover:bg-green-700;
+  }
+  
+  .btn-warning {
+    @apply bg-yellow-700 dark:bg-yellow-600 text-white border-yellow-700 dark:border-yellow-600 hover:bg-yellow-800 dark:hover:bg-yellow-700;
+  }
+  
+  .btn-danger {
+    @apply bg-red-700 dark:bg-red-600 text-white border-red-700 dark:border-red-600 hover:bg-red-800 dark:hover:bg-red-700;
+  }
+  
+  .form-control {
+    @apply block w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition-colors duration-200;
+  }
+  
+  .card {
+    @apply bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 transition-colors duration-200;
+  }
+  
+  .card-header {
+    @apply px-3 py-2 border-b border-gray-200 dark:border-gray-700;
+  }
+  
+  .card-body {
+    @apply px-3 py-2;
+  }
+  
+  .card-footer {
+    @apply px-3 py-2 border-t border-gray-200 dark:border-gray-700;
+  }
+  
+}
+

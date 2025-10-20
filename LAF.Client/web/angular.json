@@ -5,7 +5,11 @@
   "projects": {
     "web": {
       "projectType": "application",
-      "schematics": {},
+      "schematics": {
+      "@schematics/angular:component": {
+        "style": "scss"
+      }
+    },
       "root": "",
       "sourceRoot": "src",
       "prefix": "app",
@@ -19,19 +23,30 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "*.css",
+                "input": "./node_modules/devextreme/dist/css/",
+                "output": "/assets/devextreme/"
               }
             ],
             "styles": [
-              "src/styles.css"
-            ]
+              "src/styles.scss",
+              "node_modules/devextreme/dist/css/dx.fluent.saas.light.compact.css"              
+            ],
+            "stylePreprocessorOptions": {
+              "includePaths": [
+                "node_modules"
+              ]
+            }
           },
           "configurations": {
             "production": {
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
-                  "maximumError": "1MB"
+                  "maximumWarning": "2MB",
+                  "maximumError": "3MB"
                 },
                 {
                   "type": "anyComponentStyle",
@@ -44,7 +59,14 @@
             "development": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "2MB",
+                  "maximumError": "5MB"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -81,5 +103,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }

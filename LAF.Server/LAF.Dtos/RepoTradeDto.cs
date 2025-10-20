@@ -68,7 +68,7 @@ namespace LAF.Dtos
         public DateTime? StartDateFrom { get; set; }
         public DateTime? StartDateTo { get; set; }
         public DateTime? SettlementDate { get; set; }
-        public string Status { get; set; }
-        public string Direction { get; set; }
+        public string? Status { get; set; }
+        public string? Direction { get; set; }
     }
 }

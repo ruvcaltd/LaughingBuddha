@@ -8,6 +8,7 @@ using LAF.Dtos;
 using LAF.Service.Interfaces.Repositories;
 using LAF.Service.Interfaces.Services;
 using LAF.Services.Mappers;
+using System.Security.Claims;
 
 namespace LAF.WebApi.Controllers
 {
@@ -174,8 +175,8 @@ namespace LAF.WebApi.Controllers
 
         [HttpGet("{id}/cashflows")]
         public async Task<ActionResult<IEnumerable<CashflowDto>>> GetFundCashflows(
-            int id, 
-            [FromQuery] DateTime? fromDate, 
+            int id,
+            [FromQuery] DateTime? fromDate,
             [FromQuery] DateTime? toDate)
         {
             try
@@ -192,8 +193,8 @@ namespace LAF.WebApi.Controllers
 
         [HttpGet("{id}/cashflow-summary")]
         public async Task<ActionResult<FundCashflowSummaryDto>> GetFundCashflowSummary(
-            int id, 
-            [FromQuery] DateTime fromDate, 
+            int id,
+            [FromQuery] DateTime fromDate,
             [FromQuery] DateTime toDate)
         {
             try
@@ -220,7 +221,7 @@ namespace LAF.WebApi.Controllers
                 }
 
                 // Get user ID from claims
-                var userIdClaim = User.FindFirst("userId")?.Value;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; ;
                 if (!int.TryParse(userIdClaim, out int userId))
                 {
                     return Unauthorized(new { error = "Invalid user authentication" });
@@ -264,7 +265,7 @@ namespace LAF.WebApi.Controllers
                 }
 
                 // Get user ID from claims
-                var userIdClaim = User.FindFirst("userId")?.Value;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; ;
                 if (!int.TryParse(userIdClaim, out int userId))
                 {
                     return Unauthorized(new { error = "Invalid user authentication" });
@@ -298,14 +299,14 @@ namespace LAF.WebApi.Controllers
             try
             {
                 // Get user ID from claims
-                var userIdClaim = User.FindFirst("userId")?.Value;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; ;
                 if (!int.TryParse(userIdClaim, out int userId))
                 {
                     return Unauthorized(new { error = "Invalid user authentication" });
                 }
 
                 var success = await _cashManagementService.EnsureFundFlatnessAsync(id, date, userId);
-                
+
                 if (success)
                 {
                     return Ok(new { message = "Fund flatness ensured successfully" });

@@ -28,6 +28,7 @@ public class Program
         builder.Services.AddScoped<IRepoTradeRepository, RepoTradeRepository>();
         builder.Services.AddScoped<IFundRepository, FundRepository>();
         builder.Services.AddScoped<IRepoRateRepository, RepoRateRepository>();
+        builder.Services.AddScoped<ICollateralTypeRepository, CollateralTypeRepository>();
         builder.Services.AddScoped<ICounterpartyRepository, CounterpartyRepository>();
         builder.Services.AddScoped<ICashAccountRepository, CashAccountRepository>();
         builder.Services.AddScoped<ICashflowRepository, CashflowRepository>();
@@ -86,6 +87,19 @@ public class Program
                     return Task.CompletedTask;
                 }
             };
+        });
+
+        // Add CORS - Allow specific origins for development with credentials
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll", policy =>
+            {
+                policy.WithOrigins("http://localhost:4200", "http://localhost:4202", "http://localhost:4203")
+                      .AllowAnyMethod()
+                      .AllowAnyHeader()
+                      .AllowCredentials() // Allow credentials (cookies, authorization headers)
+                      .WithExposedHeaders("Token-Expired"); // Expose custom headers
+            });
         });
 
         builder.Services.AddControllers();
@@ -147,6 +161,9 @@ public class Program
         }
 
         app.UseHttpsRedirection();
+
+        // Add CORS middleware - must be before Authentication
+        app.UseCors("AllowAll");
 
         // Authentication must come before Authorization
         app.UseAuthentication();
