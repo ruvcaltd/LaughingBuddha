@@ -13,7 +13,7 @@ namespace LAF.Service.Interfaces.Services
         Task<IEnumerable<FundBalanceDto>> GetAllFundBalancesAsync(DateTime asOfDate);
         Task<FundFlatnessCheckDto> CheckFundFlatnessAsync(int fundId, DateTime checkDate);
         Task<IEnumerable<FundFlatnessCheckDto>> CheckAllFundsFlatnessAsync(DateTime checkDate);
-        Task<CashflowDto> CreateCashflowAsync(CreateCashflowDto createDto);
+        Task<CashflowDto> CreateCashflowAsync(CreateCashflowDto createDto, bool useTransaction);
         Task<IEnumerable<CashflowDto>> GetCashflowsByAccountAsync(int cashAccountId, DateTime? fromDate, DateTime? toDate);
         Task<IEnumerable<CashflowDto>> GetCashflowsByFundAsync(int fundId, DateTime? fromDate, DateTime? toDate);
         Task<FundCashflowSummaryDto> GetFundCashflowSummaryAsync(int fundId, DateTime fromDate, DateTime toDate);

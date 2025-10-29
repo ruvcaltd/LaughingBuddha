@@ -30,13 +30,14 @@ namespace LAF.Dtos
         public string CreatedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
         public string ModifiedBy { get; set; }
+        public SecurityDto? Security { get; set; }
     }
 
     public class CreateRepoTradeDto
     {
         public int FundId { get; set; }
         public int CounterpartyId { get; set; }
-        public int SecurityId { get; set; }
+        public long SecurityId { get; set; }
         public int CollateralTypeId { get; set; }
         public string Direction { get; set; }
         public decimal Notional { get; set; }
@@ -45,7 +46,6 @@ namespace LAF.Dtos
         public DateTime EndDate { get; set; }
         public DateTime SettlementDate { get; set; }
         public string Currency { get; set; }
-        public decimal? Haircut { get; set; }
         public int CreatedByUserId { get; set; }
     }
 
@@ -65,6 +65,7 @@ namespace LAF.Dtos
     {
         public int? FundId { get; set; }
         public int? CounterpartyId { get; set; }
+        public int? CollateralTypeId { get; set; }
         public DateTime? StartDateFrom { get; set; }
         public DateTime? StartDateTo { get; set; }
         public DateTime? SettlementDate { get; set; }

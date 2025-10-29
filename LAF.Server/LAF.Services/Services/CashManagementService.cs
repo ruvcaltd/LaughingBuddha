@@ -203,20 +203,30 @@ namespace LAF.Services.Services
             }
         }
 
-        public async Task<CashflowDto> CreateCashflowAsync(CreateCashflowDto createDto)
+        public async Task<CashflowDto> CreateCashflowAsync(CreateCashflowDto createDto, bool useTransaction)
         {
             // Handle null context (for testing)
             if (_context != null)
             {
-                using var transaction = await _context.Database.BeginTransactionAsync();
-                try
+                // if useTransaction is true, begin a transaction
+                if (useTransaction)
                 {
-                    return await CreateCashflowInternalAsync(createDto, transaction);
+                    using var transaction = await _context.Database.BeginTransactionAsync();
+                    try
+                    {
+                        var result = await CreateCashflowInternalAsync(createDto, transaction);
+                        await transaction.CommitAsync();
+                        return result;
+                    }
+                    catch (Exception)
+                    {
+                        await transaction.RollbackAsync();
+                        throw;
+                    }
                 }
-                catch (Exception)
+                else
                 {
-                    await transaction.RollbackAsync();
-                    throw;
+                    return await CreateCashflowInternalAsync(createDto, null);
                 }
             }
             else
@@ -288,12 +298,12 @@ namespace LAF.Services.Services
             try
             {
                 var cashflows = await _cashflowRepository.GetCashflowsByAccountAsync(cashAccountId);
-                
+
                 if (fromDate.HasValue)
                 {
                     cashflows = cashflows.Where(cf => cf.CashflowDate.DateTime >= fromDate.Value);
                 }
-                
+
                 if (toDate.HasValue)
                 {
                     cashflows = cashflows.Where(cf => cf.CashflowDate.DateTime <= toDate.Value);
@@ -313,12 +323,12 @@ namespace LAF.Services.Services
             try
             {
                 var cashflows = await _cashflowRepository.GetCashflowsByFundAsync(fundId);
-                
+
                 if (fromDate.HasValue)
                 {
                     cashflows = cashflows.Where(cf => cf.CashflowDate.DateTime >= fromDate.Value);
                 }
-                
+
                 if (toDate.HasValue)
                 {
                     cashflows = cashflows.Where(cf => cf.CashflowDate.DateTime <= toDate.Value);
@@ -393,7 +403,7 @@ namespace LAF.Services.Services
 
                 // Create settlement cashflow
                 var settlementAmount = trade.Direction == "Lend" ? -trade.Notional : trade.Notional;
-                
+
                 var cashflowDto = new CreateCashflowDto
                 {
                     CashAccountId = cashAccount.Id,
@@ -407,7 +417,7 @@ namespace LAF.Services.Services
                     CreatedByUserId = processedByUserId
                 };
 
-                await CreateCashflowAsync(cashflowDto);
+                await CreateCashflowAsync(cashflowDto, false);
 
                 // Update trade status to Settled
                 trade.Status = "Settled";
@@ -454,8 +464,8 @@ namespace LAF.Services.Services
                 // Calculate maturity amount (principal + interest)
                 var days = (trade.MaturityDate.Date - (trade.StartDate?.Date ?? trade.TradeDate.Date)).Days;
                 var interest = trade.Notional * trade.Rate / 100 * days / 365;
-                var maturityAmount = trade.Direction == "Lend" 
-                    ? trade.Notional + interest 
+                var maturityAmount = trade.Direction == "Lend"
+                    ? trade.Notional + interest
                     : -(trade.Notional + interest);
 
                 // Create maturity cashflow
@@ -472,7 +482,7 @@ namespace LAF.Services.Services
                     CreatedByUserId = processedByUserId
                 };
 
-                await CreateCashflowAsync(cashflowDto);
+                await CreateCashflowAsync(cashflowDto, false);
 
                 // Update trade status to Matured
                 trade.Status = "Matured";
@@ -498,7 +508,7 @@ namespace LAF.Services.Services
             try
             {
                 var flatnessCheck = await CheckFundFlatnessAsync(fundId, date);
-                
+
                 if (flatnessCheck.IsFlat)
                 {
                     _logger.LogInformation($"Fund {fundId} is already flat");
@@ -526,7 +536,7 @@ namespace LAF.Services.Services
                     CreatedByUserId = processedByUserId
                 };
 
-                await CreateCashflowAsync(adjustmentCashflow);
+                await CreateCashflowAsync(adjustmentCashflow, false);
 
                 _logger.LogInformation($"Fund {fundId} flatness ensured with adjustment of {flatnessCheck.RequiredAdjustment:C}");
                 return true;

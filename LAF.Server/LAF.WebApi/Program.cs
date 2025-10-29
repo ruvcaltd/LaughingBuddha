@@ -10,6 +10,7 @@ using LAF.Services.Services;
 using LAF.Service.Interfaces.Services;
 using LAF.Service.Interfaces.Repositories;
 using LAF.Services.Repositories;
+using LAF.WebApi.Hubs;
 
 public class Program
 {
@@ -41,7 +42,7 @@ public class Program
         builder.Services.AddScoped<ITargetCircleService, TargetCircleService>();
         builder.Services.AddScoped<ICashManagementService, CashManagementService>();
         builder.Services.AddScoped<IEagleIntegrationService, EagleIntegrationService>();
-
+        builder.Services.AddScoped<ISecurityService, SecurityService>();
         // JWT Authentication
         builder.Services.AddAuthentication(options =>
         {
@@ -98,12 +99,19 @@ public class Program
                       .AllowAnyMethod()
                       .AllowAnyHeader()
                       .AllowCredentials() // Allow credentials (cookies, authorization headers)
-                      .WithExposedHeaders("Token-Expired"); // Expose custom headers
+                      .WithExposedHeaders("Token-Expired") // Expose custom headers
+                                                           // Add these methods explicitly for SignalR
+                      .SetIsOriginAllowed(_ => true)
+                      .AllowCredentials();
             });
         });
 
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSignalR(options =>
+        {
+            options.EnableDetailedErrors = true; // Helps with debugging
+        }); // Add SignalR with configuration
 
         // Configure Swagger
         builder.Services.AddSwaggerGen(options =>
@@ -162,7 +170,7 @@ public class Program
 
         app.UseHttpsRedirection();
 
-        // Add CORS middleware - must be before Authentication
+        // Important: CORS middleware must come before SignalR and other middleware
         app.UseCors("AllowAll");
 
         // Authentication must come before Authorization
@@ -170,6 +178,7 @@ public class Program
         app.UseAuthorization();
 
         app.MapControllers();
+        app.MapHub<LafHub>("/hubs/laf"); // Map SignalR hub
 
         app.Run();
     }

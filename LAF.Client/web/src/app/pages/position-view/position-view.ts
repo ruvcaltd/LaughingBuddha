@@ -1,3 +1,5 @@
+import { PositionLockDto } from './../../api/client';
+import { SignalRService } from './../../services/signalr.service';
 import { RepoRatesStore } from './../../store/repo-rates/repo-rates.store';
 import { Component, OnInit, inject, ChangeDetectorRef, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -21,6 +23,10 @@ import {
   RepoRatesClient,
   FundsClient,
   RepoTradesClient,
+  PositionsClient,
+  IPositionChangeDto,
+  PositionChangeDto,
+  IPositionLockDto,
 } from '../../api/client';
 import { CounterpartyStore } from '../../store/counterparty/counterparty.store';
 import { CollateralTypeStore } from '../../store/collateral-type/collateral-type.store';
@@ -53,8 +59,10 @@ import { FundBalanceStore } from '../../store/fund-balances/fund-balance.store';
 })
 export class PositionsView implements OnInit {
   private repoRateApiClient = inject(RepoRatesClient);
+  private positionsApiClient = inject(PositionsClient);
   private repoTradesApiClient = inject(RepoTradesClient);
   private fundApiClient = inject(FundsClient);
+  private signalRService = inject(SignalRService);
     
   private themeService = inject(ThemeService);
   private counterpartyStore = inject(CounterpartyStore);
@@ -100,11 +108,8 @@ export class PositionsView implements OnInit {
   public positions = this.positionsStore.positions;
   public loading = this.positionsStore.isLoading;
   public error = computed(() => this.positionsStore.error());
+    
 
-  gridTheme = computed(() => (this.isDark ? 'dx.material.blue.compact.dark' : 'dx.material.blue.compact.light'));
-  get isDark(): boolean {
-    return this.themeService.isDark();
-  }
 
   async ngOnInit(): Promise<void> {
     await Promise.all([
@@ -112,7 +117,35 @@ export class PositionsView implements OnInit {
       this.collateralTypeStore.loadAll(),
       this.fundStore.loadAll()
     ]);
-    await this.loadData();    
+    await this.loadData();
+
+   this.subscribeToSignalR();
+  }
+
+  ngOnDestroy(): void {
+    // Unsubscribe SignalR handlers
+    this.signalRService.off('PositionChanged');
+    this.signalRService.off('NewTrade');
+  }
+
+  private subscribeToSignalR(): void {
+    // PositionChanged -> update the specific position line
+    this.signalRService.on<IPositionChangeDto>('PositionChanged', (change: IPositionChangeDto) => {
+      console.log('PositionChanged received:', change);
+      // TODO: reflect change into positionsStore when server contract is finalized
+    });
+
+    // NewTrade -> refresh positions from server
+    this.signalRService.on('NewTrade', () => {
+      console.log('NewTrade received, consider reloading positions...');
+      // Optional: trigger a refresh if needed
+      // void this.loadPositions(new Date());
+    });
+
+    this.signalRService.on<IPositionLockDto>('PositionCellEditing', (pos) => {
+      this.positionsStore.lockPosition(pos);
+      console.log('PositionCellEditing received:', pos);
+    });
   }
 
   async loadData(): Promise<void> {
@@ -159,28 +192,24 @@ export class PositionsView implements OnInit {
   }
 
   async loadPositions(date: Date): Promise<void> {
-
     if(this.positionsStore.positions().length > 0){
       return;
     }
 
     try {
       // Get active trades for the date - need to use search method with appropriate parameters
-      const positions = await firstValueFrom(this.repoTradesApiClient.search2(
-        undefined, // fundId
-        undefined, // counterpartyId  
-        date, // startDateFrom
-        date, // startDateTo
-        undefined, // settlementDate
-        'Active', // status
-        undefined // direction
+      const positions = await firstValueFrom(this.positionsApiClient.day(
+        date
       ));
-      const tradesWithExtensions: ITradeBlotterGridItem[] = positions.map(trade => ({
-        ...trade,
+      
+      const tradesWithExtensions: ITradeBlotterGridItem[] = positions.map(pos => ({
+        ...pos,
         variance: 0, // Will be calculated
-        fundNotionals: {},
-        fundExposurePercents: {},
-        fundStatuses: {}
+        fundNotionals: pos.fundNotionals,
+        fundExposurePercents: pos.exposurePercentages,
+        fundStatuses: pos.statuses,
+        // Ensure locked map exists so locks and UI styling can work reliably
+        locked: {}
       }));
       this.positionsStore.setPositions(tradesWithExtensions);
     } catch (error) {
@@ -190,30 +219,7 @@ export class PositionsView implements OnInit {
   }
 
   
-  // Handle cell value changes in the DataGrid
-  async onCellValueChanged(e: any): Promise<void> {
-    console.log('Cell value changed:', e); // Debug logging
-    
-    // Check if this is a notional field change
-    const dataField = e.dataField;
-    console.log('Data field:', dataField);
-    
-    // Check if this is a fund notional field (format: 'fundNotionals.{fundId}')
-    if (dataField && dataField.startsWith('fundNotionals.')) {
-      const fundId = parseInt(dataField.split('.')[1]);
-      const newNotional = e.value;
-      const trade = e.data;
-      
-      console.log(`Fund notional changed - Fund ID: ${fundId}, New Notional: ${newNotional}, Trade:`, trade);
-      
-      if (newNotional !== undefined && newNotional !== null && trade && newNotional !== 0) {
-        console.log('Processing notional change...');
-        await this.onNotionalChanged(trade, fundId, newNotional);
-      }
-    }
-  }
-
-
+  
   async onSaved(): Promise<void> {
     // Implement save logic for batch updates
     const currentPositions = this.positionsStore.positions();    
@@ -223,15 +229,14 @@ export class PositionsView implements OnInit {
    onRowInserted(e: any): void {
     this.onRowUpdated(e);
    }
-
+  
+   
     // Additional event handlers for debugging and ensuring we catch all changes
-  onRowUpdated(e: any): void {
+  async onRowUpdated(e: any) {
     const pos = e.data as ITradeBlotterGridItem;
-    this.positionsStore.addOrUpatePosition(pos);
-    
    if(pos.fundNotionals){
-        Object.entries(pos.fundNotionals).forEach(([fundId, newNotional]) => {
-          this.onNotionalChanged(pos, parseInt(fundId), newNotional);
+        Object.entries(pos.fundNotionals).forEach(async ([fundId, newNotional]) => {
+          await this.onNotionalChanged(pos, parseInt(fundId), newNotional);
         });
       }
   }
@@ -251,14 +256,14 @@ export class PositionsView implements OnInit {
       if (selectedRepoRate) {
 
         // if this already exists in the grid, return
-        const existingPosition = this.positionsStore.positions().find(x => x.collateralTypeId === selectedRepoRate.collateralTypeId && x.counterpartyId === selectedRepoRate.counterpartyId);
+        const existingPosition = this.tradeStore.trades().find(x => x.collateralTypeId === selectedRepoRate.collateralTypeId && x.counterpartyId === selectedRepoRate.counterpartyId);
         if(existingPosition){
           dropDownBoxComponent.close();
           return;
         }
 
         // Find the trade in the store using the trade ID from the cell data
-        const currentPositions = this.positionsStore.positions();
+        const currentPositions = this.tradeStore.trades();
         const tradeIndex = currentPositions.findIndex(trade => trade.id === cellInfo.data.id);
 
         if (tradeIndex !== -1) {
@@ -286,8 +291,7 @@ export class PositionsView implements OnInit {
           cellInfo.data.collateralTypeId = selectedRepoRate.collateralTypeId;
           cellInfo.data.rate = selectedRepoRate.repoRate;
           cellInfo.data.variance = selectedRepoRate.finalCircle! - selectedRepoRate.targetCircle!;
-          cellInfo.data.securityId = tradeToUpdate.securityId;
-          cellInfo.data.securityIsin = tradeToUpdate.securityIsin;
+          cellInfo.data.securityId = tradeToUpdate.securityId;          
           cellInfo.data.securityName = tradeToUpdate.securityName;
         } else {
           // For new trades that don't have an ID yet, update cell data directly
@@ -310,21 +314,21 @@ export class PositionsView implements OnInit {
   private async populateSecurityInfo(trade: ITradeBlotterGridItem, repoRate: IRepoRateDto): Promise<void> {
     try {
       // Check for existing trades with same counterparty and collateral type
-      const existingTrades = await firstValueFrom(this.repoTradesApiClient.search2(
-        trade.fundId,
+      const existingTrades = await firstValueFrom(this.repoTradesApiClient.search2(      
+        undefined,
         trade.counterpartyId,
+        trade.collateralTypeId,
         undefined, // startDateFrom
         undefined, // startDateTo
         undefined, // settlementDate
         undefined, // status
-        undefined // direction
+        undefined // direction        
       ));
       
       if (existingTrades.length > 0) {
         // Use existing security
         const existingTrade = existingTrades[0];
-        trade.securityId = existingTrade.securityId;
-        trade.securityIsin = existingTrade.securityIsin;
+        trade.securityId = existingTrade.securityId;        
         trade.securityName = existingTrade.securityName;
       } else {
         // Create mock security
@@ -332,8 +336,7 @@ export class PositionsView implements OnInit {
         const collateralType = this.collateralTypes().find(ct => ct.id === repoRate.collateralTypeId);
         
         // Generate a mock security ID (using a negative number to indicate mock)
-        trade.securityId = -Date.now();
-        trade.securityIsin = `MOCK_${counterparty?.name}_${collateralType?.name}_${Date.now()}`;
+        trade.securityId = -Date.now();        
         trade.securityName = `${counterparty?.name} ${collateralType?.name} Repo`;
       }
     } catch (error) {
@@ -343,8 +346,7 @@ export class PositionsView implements OnInit {
       const collateralType = this.collateralTypes().find(ct => ct.id === repoRate.collateralTypeId);
       
       // Generate a mock security ID (using a negative number to indicate mock)
-      trade.securityId = -Date.now();
-      trade.securityIsin = `MOCK_${counterparty?.name}_${collateralType?.name}_${Date.now()}`;
+      trade.securityId = -Date.now();      
       trade.securityName = `${counterparty?.name} ${collateralType?.name} Repo`;
     }
   }
@@ -356,31 +358,46 @@ export class PositionsView implements OnInit {
   // Handle notional value changes for validation and draft trade creation
   async onNotionalChanged(trade: ITradeBlotterGridItem, fundId: number, newNotional: number): Promise<void> {
     try {
-      // Step 1: Validate against Target Circle limit
-      const validationResult = await this.validateTargetCircleLimit(trade, fundId, newNotional);
+
+      console.log(`Notional changed for Security ${trade.securityName}, Fund ID ${fundId}: New Notional = ${newNotional}`);
+
+      const change: IPositionChangeDto = {        
+        fundId: fundId,
+        collateralTypeId: trade.collateralTypeId,
+        counterpartyId: trade.counterpartyId,
+        newNotionalAmount: newNotional,
+        status: 'Draft',
+        // T+1
+        securityMaturityDate: new Date(new Date().setDate(this.selectedDate().getDate() + 1)) // TODO: use business day calculation
+      };
+
+      await firstValueFrom(this.positionsApiClient.update(new PositionChangeDto(change)));
+
+      // // Step 1: Validate against Target Circle limit
+      // const validationResult = await this.validateTargetCircleLimit(trade, fundId, newNotional);
       
-      if (!validationResult.isValid) {
-        this.toastService.showWarning(validationResult.warningMessage!, 8000);
-        return; // Don't proceed with trade creation if validation fails
-      }
+      // if (!validationResult.isValid) {
+      //   this.toastService.showWarning(validationResult.warningMessage!, 8000);
+      //   return; // Don't proceed with trade creation if validation fails
+      // }
 
-      // if trade.counterpartyId or trade.collateralTypeId is not set, we cannot proceed
-      if(!trade.counterpartyId || !trade.collateralTypeId){
-        this.toastService.showError('Please select a valid security before entering notional.');
-        return;
-      }
+      // // if trade.counterpartyId or trade.collateralTypeId is not set, we cannot proceed
+      // if(!trade.counterpartyId || !trade.collateralTypeId){
+      //   this.toastService.showError('Please select a valid security before entering notional.');
+      //   return;
+      // }
 
-      // Step 2: Create draft trade
-      this.addOrderForNewNotional(trade, newNotional);
+      // // Step 2: Create draft trade
+      // this.addOrderForNewNotional(trade, newNotional);
 
-      // Step 3: Update available cash display
-      this.updateFundBalance(fundId, newNotional);
+      // // Step 3: Update available cash display
+      // this.updateFundBalance(fundId, newNotional);
 
-      // update repo rate final circle balance
-      this.updateRepoRateBalance(trade.counterpartyId, trade.collateralTypeId, newNotional);
+      // // update repo rate final circle balance
+      // this.updateRepoRateBalance(trade.counterpartyId, trade.collateralTypeId, newNotional);
 
       // Show success message
-      this.toastService.showSuccess(`Draft trade created for ${this.getFundName(fundId)}: $${newNotional.toLocaleString()}`);
+  this.toastService.showSuccess(`Draft trade created for ${this.getFundName(fundId)}`);
 
     } catch (error) {
       console.error('Error handling notional change:', error);
@@ -388,86 +405,16 @@ export class PositionsView implements OnInit {
     }
   }
 
-  private addOrderForNewNotional(trade: ITradeBlotterGridItem, newNotional: number){
-     // get submitted trades from tradeStore that has the same fund code, counterpartyId, collateralTypeId
-     const trades =  this.tradeStore.trades().filter(t =>
-       t.fundCode === trade.fundCode &&
-       t.counterpartyId === trade.counterpartyId &&
-       t.collateralTypeId === trade.collateralTypeId
-     );
-
-      // calculate total position
-     let totalPosition = 0;
-     trades.forEach(t => {
-       const directionMultiplier = t.direction === 'Buy' ? 1 : -1;
-       totalPosition += (t.notional || 0) * directionMultiplier;
-     });
-
-     // prepare a new order with a notional equal to diff of newNotional and totalPosition
-      const direction: 'Buy' | 'Sell' = newNotional >= totalPosition ? 'Buy' : 'Sell';
-      const absNotional = Math.abs(newNotional - totalPosition);
-      
-      const newOrder: DraftTrade = {        
-        id: `draft_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        securityId: trade.securityId,
-        securityIsin: trade.securityIsin,
-        securityName: trade.securityName,
-        collateralTypeId: trade.collateralTypeId,
-        counterpartyId: trade.counterpartyId,
-        notional: absNotional,
-        direction: direction,
-        fundId: trade.fundId,
-        fundCode: trade.fundCode,
-        fundName: trade.fundName,
-        rate: trade.rate,        
-        status: 'Draft',        
-        createdAt: new Date()
-      };
-
-      this.orderBasketStore.addOrUpdateDraftTrade(newOrder);    
-
-     return totalPosition;
-  }
-
-  private async validateTargetCircleLimit(trade: ITradeBlotterGridItem, fundId: number, newNotional: number): Promise<{isValid: boolean, warningMessage?: string}> {
-    try {
-      // Get the corresponding repo rate for this counterparty and collateral type
-      const repoRate = this.repoRateStore.rates().find(rate =>
-        rate.counterpartyId === trade.counterpartyId && 
-        rate.collateralTypeId === trade.collateralTypeId
-      );
-
-      if (!repoRate) {
-        return { isValid: true }; // No repo rate found, can't validate
-      }
-        
-      // Check against Target Circle limit
-      const targetCircleAmount = (repoRate.targetCircle || 0) * 1000000;
-      
-      if (newNotional > targetCircleAmount) {
-        const excessAmount = newNotional - targetCircleAmount;
-        const message = `Target Circle limit exceeded! Total notional ($${newNotional.toLocaleString()}) exceeds Target Circle ($${targetCircleAmount.toLocaleString()}) by $${excessAmount.toLocaleString()}`;
-        return { isValid: false, warningMessage: message };
-      }
-
-      return { isValid: true };
-    } catch (error) {
-      console.error('Error validating Target Circle limit:', error);
-      return { isValid: true }; // Allow trade on validation errors
-    }
-  }
-
-
-  private updateFundBalance(fundId: number, notionalAmount: number): void {    
-    this.fundBalStore.reduceBalanceBalances(fundId, notionalAmount);   
-  }
-
-  private updateRepoRateBalance(counterpartyId: number, collateralTypeId: number, notionalAmount: number): void {        
-    this.repoRateStore.addToCircle(counterpartyId, collateralTypeId, notionalAmount);
-  }
-
-  onEditingStart(e: any): void {
+  async onEditingStart(e: any) {
     console.log('Editing started:', e);
+    if(e.column.caption === 'Notional' || e.column.caption === 'Exposure %' || e.column.caption === 'Status'){
+      const fundId = parseInt(e.column.dataField.split('.')[1]);
+      await firstValueFrom(this.positionsApiClient.broadcastLock(new PositionLockDto({        
+        fundId: fundId,
+        counterpartyId: e.data.counterpartyId,
+        collateralTypeId: e.data.collateralTypeId
+      })));
+    }
   }
 
   onEditingEnd(e: any): void {
@@ -482,6 +429,46 @@ export class PositionsView implements OnInit {
       if (newNotional !== undefined && newNotional !== null && trade && newNotional !== 0) {
         this.onNotionalChanged(trade, fundId, newNotional);
       }
+    }
+  }
+
+  // Visually indicate non-editable (locked) cells with a red border
+  onCellPrepared(e: any): void {
+    try {
+      if (!e || e.rowType !== 'data' || !e.column || !e.cellElement) {
+        return;
+      }
+
+      const dataField: string | undefined = e.column.dataField;
+      if (!dataField || typeof dataField !== 'string') {
+        return;
+      }
+
+      // Only consider the dynamic fund columns
+      const isFundColumn =
+        dataField.startsWith('fundNotionals.') ||
+        dataField.startsWith('fundExposurePercents.') ||
+        dataField.startsWith('fundStatuses.');
+      if (!isFundColumn) {
+        return;
+      }
+
+      // Extract fundId from dataField like 'fundNotionals.12' or 'fundExposurePercents.12.exposure'
+      const parts = dataField.split('.');
+      const fundId = Number(parts[1]);
+
+      // Determine if the cell should be editable based on row-level locks
+      const isLocked = !!e.data?.locked?.[fundId];
+
+      // If editing is disallowed either by column config or row lock, add the CSS class
+      const columnAllowEditing = e.column.allowEditing;
+      const isAllowedByColumn = typeof columnAllowEditing === 'boolean' ? columnAllowEditing : true;
+
+      if (!isAllowedByColumn || isLocked) {
+        e.cellElement.classList.add('cell-locked');
+      }
+    } catch (err) {
+      console.warn('onCellPrepared styling failed:', err);
     }
   }
 

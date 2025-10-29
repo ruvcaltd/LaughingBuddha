@@ -19,7 +19,7 @@ namespace LAF.Services.Repositories
             _context = context;
         }
 
-        public async Task<Security> GetByIdAsync(int id)
+        public async Task<Security> GetByIdAsync(long id)
         {
             return await _context.Securities
                 .FirstOrDefaultAsync(s => s.Id == id);
@@ -85,9 +85,18 @@ namespace LAF.Services.Repositories
                 .ToListAsync();
         }
 
+        public async Task<Security> GetByIssuerAssetTypeAndMaturity(string issuer, string assetType, DateTime securityMaturityDate)
+        {
+            return await _context.Securities
+               .Where(s => s.AssetType == assetType && s.Issuer == issuer && s.MaturityDate == securityMaturityDate)
+               .FirstOrDefaultAsync();
+        }
+
         public async Task<bool> SecurityExistsAsync(string isin)
         {
             return await _context.Securities.AnyAsync(s => s.Isin == isin);
         }
+
+
     }
 }

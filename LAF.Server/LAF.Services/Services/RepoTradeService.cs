@@ -64,9 +64,9 @@ namespace LAF.Services.Services
             var trades = await _repoTradeRepository.FindAsync(trade =>
                  (!query.FundId.HasValue || trade.FundId == query.FundId.Value) &&
                  (!query.CounterpartyId.HasValue || trade.CounterpartyId == query.CounterpartyId.Value) &&
-                 (!query.StartDateFrom.HasValue || trade.StartDate >= query.StartDateFrom.Value) &&
-                 (!query.StartDateTo.HasValue || trade.StartDate <= query.StartDateTo.Value) &&
-                 (!query.SettlementDate.HasValue || trade.TradeDate == query.SettlementDate.Value) &&
+                 (!query.StartDateFrom.HasValue || trade.StartDate >= query.StartDateFrom.Value.Date) &&
+                 (!query.StartDateTo.HasValue || trade.StartDate <= query.StartDateTo.Value.Date) &&
+                 (!query.SettlementDate.HasValue || trade.TradeDate == query.SettlementDate.Value.Date) &&
                  (string.IsNullOrEmpty(query.Status) || trade.Status == query.Status) &&
                  (string.IsNullOrEmpty(query.Direction) || trade.Direction == query.Direction)
              );
@@ -99,6 +99,7 @@ namespace LAF.Services.Services
                 // Create the trade
                 var trade = RepoTradeMapper.ToEntity(createDto);
                 trade = await _repoTradeRepository.AddAsync(trade);
+                trade.Status = "Draft";
 
                 // Create cashflow for trade settlement
                 await CreateTradeSettlementCashflow(trade);
@@ -219,26 +220,26 @@ namespace LAF.Services.Services
                 return false;
             }
 
-            // Validate security exists
+            // Validate security exists or collateral type and counterparty is provided
             var security = await _securityRepository.GetByIdAsync(tradeDto.SecurityId);
-            if (security == null)
+            if (security == null && (counterparty == null && tradeDto.CollateralTypeId == default))
             {
                 _logger.LogWarning($"Invalid security ID: {tradeDto.SecurityId}");
                 return false;
             }
 
             // Validate dates
-            if (tradeDto.StartDate > tradeDto.EndDate)
-            {
-                _logger.LogWarning("Start date cannot be after end date");
-                return false;
-            }
+            //if (tradeDto.StartDate > tradeDto.EndDate)
+            //{
+            //    _logger.LogWarning("Start date cannot be after end date");
+            //    return false;
+            //}
 
-            if (tradeDto.SettlementDate < DateTime.Today)
-            {
-                _logger.LogWarning("Settlement date cannot be in the past");
-                return false;
-            }
+            //if (tradeDto.SettlementDate < DateTime.Today)
+            //{
+            //    _logger.LogWarning("Settlement date cannot be in the past");
+            //    return false;
+            //}
 
             // Validate notional amount
             if (tradeDto.Notional <= 0)
@@ -383,7 +384,7 @@ namespace LAF.Services.Services
 
             var cashflowDto = new CreateCashflowDto
             {
-                CashAccountId = trade.FundId ?? 0, // Assuming fund has a cash account with same ID
+                CashAccountId = trade.FundId ?? 0,
                 FundId = trade.FundId ?? 0,
                 RepoTradeId = trade.Id,
                 Amount = cashflowAmount,
@@ -394,7 +395,7 @@ namespace LAF.Services.Services
                 CreatedByUserId = trade.CreatedBy ?? 0
             };
 
-            await _cashManagementService.CreateCashflowAsync(cashflowDto);
+            await _cashManagementService.CreateCashflowAsync(cashflowDto, false);
         }
 
         private async Task ProcessTradeMaturity(RepoTrade trade, int processedByUserId)
@@ -419,7 +420,7 @@ namespace LAF.Services.Services
                 CreatedByUserId = processedByUserId
             };
 
-            await _cashManagementService.CreateCashflowAsync(cashflowDto);
+            await _cashManagementService.CreateCashflowAsync(cashflowDto, false);
         }
 
         private async Task ReverseTradeCashflows(int tradeId, int reversedByUserId)
@@ -440,7 +441,7 @@ namespace LAF.Services.Services
                     CreatedByUserId = reversedByUserId
                 };
 
-                await _cashManagementService.CreateCashflowAsync(reversalDto);
+                await _cashManagementService.CreateCashflowAsync(reversalDto, false);
             }
         }
 

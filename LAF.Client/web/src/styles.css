@@ -90,3 +90,9 @@
   
 }
 
+/* DevExtreme DataGrid: visually mark non-editable (locked) cells */
+.dx-datagrid-rowsview .dx-row .cell-locked {
+  outline: 2px solid #ef4444; /* Tailwind red-500 */
+  outline-offset: -2px; /* keep border inside cell */
+}
+

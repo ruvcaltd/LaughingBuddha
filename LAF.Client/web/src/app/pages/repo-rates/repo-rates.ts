@@ -165,8 +165,8 @@ export class RepoRates implements OnInit {
   async toggleActive(row: any) {
     try {
       row.active = !row.active;
-      if (row.active) await this.repoRateApiClient.setActive(row.id);
-      else await this.repoRateApiClient.setInactive(row.id);
+      if (row.active) await firstValueFrom(this.repoRateApiClient.setActive(row.id));
+      else await firstValueFrom(this.repoRateApiClient.setInactive(row.id));
     } catch (error) {
       console.error('Error toggling active state:', error);
     }
@@ -186,7 +186,7 @@ export class RepoRates implements OnInit {
           active: data.active,
           modifiedByUserId: this.sharedStore.currentUser()?.id || 1,
         });
-        await this.repoRateApiClient.repoRatesPUT(data.id, updateDto);
+        await firstValueFrom(this.repoRateApiClient.repoRatesPUT(data.id, updateDto));
       } else {
         // Create new rate
         const createDto = new CreateRepoRateDto({
@@ -199,7 +199,7 @@ export class RepoRates implements OnInit {
           createdByUserId: this.sharedStore.currentUser()?.id || 1,
           repoDate: this.selectedDate() ?? new Date(),
         });
-        await this.repoRateApiClient.repoRatesPOST(createDto);
+        await firstValueFrom(this.repoRateApiClient.repoRatesPOST(createDto));
       }
       if (reloadAfter) await this.loadRepoRatesForDate(this.selectedDate() ?? new Date());
     } catch (error) {

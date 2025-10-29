@@ -8,7 +8,7 @@ namespace LAF.Service.Interfaces.Repositories
 {
     public interface ISecurityRepository
     {
-        Task<Security> GetByIdAsync(int id);
+        Task<Security> GetByIdAsync(long id);
         Task<Security> GetByIsinAsync(string isin);
         Task<IEnumerable<Security>> GetAllAsync();
         Task<IEnumerable<Security>> FindAsync(Expression<Func<Security, bool>> predicate);
@@ -18,5 +18,6 @@ namespace LAF.Service.Interfaces.Repositories
         Task<IEnumerable<Security>> GetSecuritiesByTypeAsync(string assetType);
         Task<IEnumerable<Security>> GetSecuritiesByIssuerAsync(string issuer);
         Task<bool> SecurityExistsAsync(string isin);
+        Task<Security> GetByIssuerAssetTypeAndMaturity(string issuer, string assetType, DateTime securityMaturityDate);
     }
 }

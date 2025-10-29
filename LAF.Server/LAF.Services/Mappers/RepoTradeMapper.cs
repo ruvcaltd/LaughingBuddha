@@ -39,7 +39,8 @@ namespace LAF.Services.Mappers
                 CreatedDate = entity.CreatedAt.DateTime,
                 CreatedBy = entity.CreatedBy?.ToString(),
                 ModifiedDate = entity.ModifiedAt?.DateTime,
-                ModifiedBy = entity.ModifiedBy?.ToString()
+                ModifiedBy = entity.ModifiedBy?.ToString(),
+                Security = entity.Security != null ? SecurityMapper.ToDto(entity.Security) : null
             };
         }
 

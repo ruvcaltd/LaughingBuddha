@@ -91,15 +91,16 @@
                 mode: 'cell',
                 allowUpdating: true,
                 allowAdding: true,
-                allowDeleting: true,
+                allowDeleting: false,
                 useIcons: true
               }"
-              (onSaved)="onSaved()"              
-              (onCellValueChanged)="onCellValueChanged($event)"              
+
+              (onSaved)="onSaved()"                                       
               (onRowInserted)="onRowInserted($event)"
               (onRowUpdated)="onRowUpdated($event)"
               (onEditingStart)="onEditingStart($event)"
               (onEditingEnd)="onEditingEnd($event)"
+              (onCellPrepared)="onCellPrepared($event)"              
             >
               <!-- First 6 columns -->
               <dxi-column
@@ -158,13 +159,13 @@
                   caption="Exposure %"
                   dataType="number"
                   format="#0.0'%'"
-                  [allowEditing]="false"
+                  [allowEditing]="true"
                 ></dxi-column>
                 <dxi-column
                   [dataField]="'fundStatuses.' + fund.id + '.status'"
                   caption="Status"
                   dataType="string"
-                  [allowEditing]="false"
+                  [allowEditing]="true"
                 ></dxi-column>
               </dxi-column>
 

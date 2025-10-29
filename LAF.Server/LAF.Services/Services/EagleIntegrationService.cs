@@ -70,14 +70,14 @@ namespace LAF.Services.Services
                 foreach (var balance in importRequest.CashBalances)
                 {
                     response.RecordsProcessed++;
-                    
+
                     try
                     {
                         var success = await ProcessEagleCashBalanceAsync(
-                            balance.FundCode, 
-                            balance.OpeningBalance, 
-                            balance.Currency, 
-                            importRequest.BalanceDate, 
+                            balance.FundCode,
+                            balance.OpeningBalance,
+                            balance.Currency,
+                            importRequest.BalanceDate,
                             importRequest.ImportedByUserId);
 
                         if (success)
@@ -97,7 +97,7 @@ namespace LAF.Services.Services
                 }
 
                 response.Success = response.Errors.Count == 0;
-                response.Message = response.Success 
+                response.Message = response.Success
                     ? $"Successfully imported {response.RecordsImported} cash balances"
                     : $"Imported {response.RecordsImported} of {response.RecordsProcessed} cash balances with {response.Errors.Count} errors";
 
@@ -163,7 +163,7 @@ namespace LAF.Services.Services
                 // Validate currency matches fund currency
                 if (fund.CurrencyCode != currency)
                 {
-                    _logger.LogWarning("Currency mismatch for fund {FundCode}: expected {ExpectedCurrency}, got {ActualCurrency}", 
+                    _logger.LogWarning("Currency mismatch for fund {FundCode}: expected {ExpectedCurrency}, got {ActualCurrency}",
                         fundCode, fund.CurrencyCode, currency);
                     return false;
                 }
@@ -190,9 +190,9 @@ namespace LAF.Services.Services
                 }
 
                 // Check if an opening balance cashflow already exists for this date
-                var existingCashflows = await _cashflowRepository.FindAsync(cf => 
-                    cf.FundId == fund.Id && 
-                    cf.CashflowDate.DateTime == balanceDate && 
+                var existingCashflows = await _cashflowRepository.FindAsync(cf =>
+                    cf.FundId == fund.Id &&
+                    cf.CashflowDate.DateTime == balanceDate &&
                     cf.CashflowType == "Eagle");
 
                 if (existingCashflows.Any())
@@ -215,11 +215,11 @@ namespace LAF.Services.Services
                     CreatedByUserId = processedByUserId
                 };
 
-                await _cashManagementService.CreateCashflowAsync(openingBalanceCashflow);
+                await _cashManagementService.CreateCashflowAsync(openingBalanceCashflow, false);
 
                 await transaction.CommitAsync();
 
-                _logger.LogInformation("Successfully processed Eagle opening balance for fund {FundCode}: {OpeningBalance:C}", 
+                _logger.LogInformation("Successfully processed Eagle opening balance for fund {FundCode}: {OpeningBalance:C}",
                     fundCode, openingBalance);
                 return true;
             }

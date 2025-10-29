@@ -2048,6 +2048,243 @@ export class FundsClient implements IFundsClient {
     }
 }
 
+export interface IPositionsClient {
+    /**
+     * @param body (optional) 
+     * @return OK
+     */
+    update(body: PositionChangeDto | undefined): Observable<PositionChangeDto>;
+    /**
+     * @param date (optional) 
+     * @return OK
+     */
+    day(date: Date | undefined): Observable<PositionDto[]>;
+    /**
+     * @param body (optional) 
+     * @return OK
+     */
+    broadcastLock(body: PositionLockDto | undefined): Observable<void>;
+}
+
+@Injectable()
+export class PositionsClient implements IPositionsClient {
+    private http: HttpClient;
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(@Inject(HttpClient) http: HttpClient, @Optional() @Inject(API_BASE_URL) baseUrl?: string) {
+        this.http = http;
+        this.baseUrl = baseUrl ?? "";
+    }
+
+    /**
+     * @param body (optional) 
+     * @return OK
+     */
+    update(body: PositionChangeDto | undefined): Observable<PositionChangeDto> {
+        let url_ = this.baseUrl + "/api/Positions/update";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_ : any = {
+            body: content_,
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processUpdate(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processUpdate(response_ as any);
+                } catch (e) {
+                    return _observableThrow(e) as any as Observable<PositionChangeDto>;
+                }
+            } else
+                return _observableThrow(response_) as any as Observable<PositionChangeDto>;
+        }));
+    }
+
+    protected processUpdate(response: HttpResponseBase): Observable<PositionChangeDto> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (response as any).error instanceof Blob ? (response as any).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = PositionChangeDto.fromJS(resultData200);
+            return _observableOf(result200);
+            }));
+        } else if (status === 400) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            }));
+        } else if (status === 401) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ProblemDetails.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            }));
+        } else if (status === 500) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("Internal Server Error", status, _responseText, _headers);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf(null as any);
+    }
+
+    /**
+     * @param date (optional) 
+     * @return OK
+     */
+    day(date: Date | undefined): Observable<PositionDto[]> {
+        let url_ = this.baseUrl + "/api/Positions/day?";
+        if (date === null)
+            throw new globalThis.Error("The parameter 'date' cannot be null.");
+        else if (date !== undefined)
+            url_ += "date=" + encodeURIComponent(date ? "" + date.toISOString() : "") + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_ : any = {
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processDay(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processDay(response_ as any);
+                } catch (e) {
+                    return _observableThrow(e) as any as Observable<PositionDto[]>;
+                }
+            } else
+                return _observableThrow(response_) as any as Observable<PositionDto[]>;
+        }));
+    }
+
+    protected processDay(response: HttpResponseBase): Observable<PositionDto[]> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (response as any).error instanceof Blob ? (response as any).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(PositionDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return _observableOf(result200);
+            }));
+        } else if (status === 401) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ProblemDetails.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            }));
+        } else if (status === 500) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("Internal Server Error", status, _responseText, _headers);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf(null as any);
+    }
+
+    /**
+     * @param body (optional) 
+     * @return OK
+     */
+    broadcastLock(body: PositionLockDto | undefined): Observable<void> {
+        let url_ = this.baseUrl + "/api/Positions/broadcast-lock";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_ : any = {
+            body: content_,
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Content-Type": "application/json",
+            })
+        };
+
+        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processBroadcastLock(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processBroadcastLock(response_ as any);
+                } catch (e) {
+                    return _observableThrow(e) as any as Observable<void>;
+                }
+            } else
+                return _observableThrow(response_) as any as Observable<void>;
+        }));
+    }
+
+    protected processBroadcastLock(response: HttpResponseBase): Observable<void> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (response as any).error instanceof Blob ? (response as any).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return _observableOf(null as any);
+            }));
+        } else if (status === 401) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ProblemDetails.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf(null as any);
+    }
+}
+
 export interface IRepoRatesClient {
     /**
      * @return OK
@@ -2743,6 +2980,7 @@ export interface IRepoTradesClient {
     /**
      * @param fundId (optional) 
      * @param counterpartyId (optional) 
+     * @param collateralTypeId (optional) 
      * @param startDateFrom (optional) 
      * @param startDateTo (optional) 
      * @param settlementDate (optional) 
@@ -2750,7 +2988,7 @@ export interface IRepoTradesClient {
      * @param direction (optional) 
      * @return OK
      */
-    search2(fundId: number | undefined, counterpartyId: number | undefined, startDateFrom: Date | undefined, startDateTo: Date | undefined, settlementDate: Date | undefined, status: string | undefined, direction: string | undefined): Observable<RepoTradeDto[]>;
+    search2(fundId: number | undefined, counterpartyId: number | undefined, collateralTypeId: number | undefined, startDateFrom: Date | undefined, startDateTo: Date | undefined, settlementDate: Date | undefined, status: string | undefined, direction: string | undefined): Observable<RepoTradeDto[]>;
     /**
      * @return OK
      */
@@ -3080,6 +3318,7 @@ export class RepoTradesClient implements IRepoTradesClient {
     /**
      * @param fundId (optional) 
      * @param counterpartyId (optional) 
+     * @param collateralTypeId (optional) 
      * @param startDateFrom (optional) 
      * @param startDateTo (optional) 
      * @param settlementDate (optional) 
@@ -3087,7 +3326,7 @@ export class RepoTradesClient implements IRepoTradesClient {
      * @param direction (optional) 
      * @return OK
      */
-    search2(fundId: number | undefined, counterpartyId: number | undefined, startDateFrom: Date | undefined, startDateTo: Date | undefined, settlementDate: Date | undefined, status: string | undefined, direction: string | undefined): Observable<RepoTradeDto[]> {
+    search2(fundId: number | undefined, counterpartyId: number | undefined, collateralTypeId: number | undefined, startDateFrom: Date | undefined, startDateTo: Date | undefined, settlementDate: Date | undefined, status: string | undefined, direction: string | undefined): Observable<RepoTradeDto[]> {
         let url_ = this.baseUrl + "/api/RepoTrades/search?";
         if (fundId === null)
             throw new globalThis.Error("The parameter 'fundId' cannot be null.");
@@ -3097,6 +3336,10 @@ export class RepoTradesClient implements IRepoTradesClient {
             throw new globalThis.Error("The parameter 'counterpartyId' cannot be null.");
         else if (counterpartyId !== undefined)
             url_ += "CounterpartyId=" + encodeURIComponent("" + counterpartyId) + "&";
+        if (collateralTypeId === null)
+            throw new globalThis.Error("The parameter 'collateralTypeId' cannot be null.");
+        else if (collateralTypeId !== undefined)
+            url_ += "CollateralTypeId=" + encodeURIComponent("" + collateralTypeId) + "&";
         if (startDateFrom === null)
             throw new globalThis.Error("The parameter 'startDateFrom' cannot be null.");
         else if (startDateFrom !== undefined)
@@ -3628,6 +3871,443 @@ export class RepoTradesClient implements IRepoTradesClient {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
             result200 = TargetCircleValidationDto.fromJS(resultData200);
+            return _observableOf(result200);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf(null as any);
+    }
+}
+
+export interface ISecuritiesClient {
+    /**
+     * @return OK
+     */
+    securitiesAll(): Observable<SecurityDto[]>;
+    /**
+     * @param body (optional) 
+     * @return OK
+     */
+    securitiesPOST(body: CreateSecurityDto | undefined): Observable<SecurityDto>;
+    /**
+     * @return OK
+     */
+    securitiesGET(id: number): Observable<SecurityDto>;
+    /**
+     * @param body (optional) 
+     * @return OK
+     */
+    securitiesPUT(id: number, body: UpdateSecurityDto | undefined): Observable<SecurityDto>;
+    /**
+     * @return OK
+     */
+    securitiesDELETE(id: number): Observable<void>;
+    /**
+     * @return OK
+     */
+    isin(isin: string): Observable<SecurityDto>;
+    /**
+     * @return OK
+     */
+    type(assetType: string): Observable<SecurityDto[]>;
+}
+
+@Injectable()
+export class SecuritiesClient implements ISecuritiesClient {
+    private http: HttpClient;
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(@Inject(HttpClient) http: HttpClient, @Optional() @Inject(API_BASE_URL) baseUrl?: string) {
+        this.http = http;
+        this.baseUrl = baseUrl ?? "";
+    }
+
+    /**
+     * @return OK
+     */
+    securitiesAll(): Observable<SecurityDto[]> {
+        let url_ = this.baseUrl + "/api/Securities";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_ : any = {
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processSecuritiesAll(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processSecuritiesAll(response_ as any);
+                } catch (e) {
+                    return _observableThrow(e) as any as Observable<SecurityDto[]>;
+                }
+            } else
+                return _observableThrow(response_) as any as Observable<SecurityDto[]>;
+        }));
+    }
+
+    protected processSecuritiesAll(response: HttpResponseBase): Observable<SecurityDto[]> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (response as any).error instanceof Blob ? (response as any).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(SecurityDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return _observableOf(result200);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf(null as any);
+    }
+
+    /**
+     * @param body (optional) 
+     * @return OK
+     */
+    securitiesPOST(body: CreateSecurityDto | undefined): Observable<SecurityDto> {
+        let url_ = this.baseUrl + "/api/Securities";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_ : any = {
+            body: content_,
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processSecuritiesPOST(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processSecuritiesPOST(response_ as any);
+                } catch (e) {
+                    return _observableThrow(e) as any as Observable<SecurityDto>;
+                }
+            } else
+                return _observableThrow(response_) as any as Observable<SecurityDto>;
+        }));
+    }
+
+    protected processSecuritiesPOST(response: HttpResponseBase): Observable<SecurityDto> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (response as any).error instanceof Blob ? (response as any).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = SecurityDto.fromJS(resultData200);
+            return _observableOf(result200);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    securitiesGET(id: number): Observable<SecurityDto> {
+        let url_ = this.baseUrl + "/api/Securities/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_ : any = {
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processSecuritiesGET(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processSecuritiesGET(response_ as any);
+                } catch (e) {
+                    return _observableThrow(e) as any as Observable<SecurityDto>;
+                }
+            } else
+                return _observableThrow(response_) as any as Observable<SecurityDto>;
+        }));
+    }
+
+    protected processSecuritiesGET(response: HttpResponseBase): Observable<SecurityDto> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (response as any).error instanceof Blob ? (response as any).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = SecurityDto.fromJS(resultData200);
+            return _observableOf(result200);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf(null as any);
+    }
+
+    /**
+     * @param body (optional) 
+     * @return OK
+     */
+    securitiesPUT(id: number, body: UpdateSecurityDto | undefined): Observable<SecurityDto> {
+        let url_ = this.baseUrl + "/api/Securities/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_ : any = {
+            body: content_,
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("put", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processSecuritiesPUT(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processSecuritiesPUT(response_ as any);
+                } catch (e) {
+                    return _observableThrow(e) as any as Observable<SecurityDto>;
+                }
+            } else
+                return _observableThrow(response_) as any as Observable<SecurityDto>;
+        }));
+    }
+
+    protected processSecuritiesPUT(response: HttpResponseBase): Observable<SecurityDto> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (response as any).error instanceof Blob ? (response as any).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = SecurityDto.fromJS(resultData200);
+            return _observableOf(result200);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    securitiesDELETE(id: number): Observable<void> {
+        let url_ = this.baseUrl + "/api/Securities/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_ : any = {
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+            })
+        };
+
+        return this.http.request("delete", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processSecuritiesDELETE(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processSecuritiesDELETE(response_ as any);
+                } catch (e) {
+                    return _observableThrow(e) as any as Observable<void>;
+                }
+            } else
+                return _observableThrow(response_) as any as Observable<void>;
+        }));
+    }
+
+    protected processSecuritiesDELETE(response: HttpResponseBase): Observable<void> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (response as any).error instanceof Blob ? (response as any).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return _observableOf(null as any);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    isin(isin: string): Observable<SecurityDto> {
+        let url_ = this.baseUrl + "/api/Securities/isin/{isin}";
+        if (isin === undefined || isin === null)
+            throw new globalThis.Error("The parameter 'isin' must be defined.");
+        url_ = url_.replace("{isin}", encodeURIComponent("" + isin));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_ : any = {
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processIsin(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processIsin(response_ as any);
+                } catch (e) {
+                    return _observableThrow(e) as any as Observable<SecurityDto>;
+                }
+            } else
+                return _observableThrow(response_) as any as Observable<SecurityDto>;
+        }));
+    }
+
+    protected processIsin(response: HttpResponseBase): Observable<SecurityDto> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (response as any).error instanceof Blob ? (response as any).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = SecurityDto.fromJS(resultData200);
+            return _observableOf(result200);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    type(assetType: string): Observable<SecurityDto[]> {
+        let url_ = this.baseUrl + "/api/Securities/type/{assetType}";
+        if (assetType === undefined || assetType === null)
+            throw new globalThis.Error("The parameter 'assetType' must be defined.");
+        url_ = url_.replace("{assetType}", encodeURIComponent("" + assetType));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_ : any = {
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processType(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processType(response_ as any);
+                } catch (e) {
+                    return _observableThrow(e) as any as Observable<SecurityDto[]>;
+                }
+            } else
+                return _observableThrow(response_) as any as Observable<SecurityDto[]>;
+        }));
+    }
+
+    protected processType(response: HttpResponseBase): Observable<SecurityDto[]> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (response as any).error instanceof Blob ? (response as any).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(SecurityDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
             return _observableOf(result200);
             }));
         } else if (status !== 200 && status !== 204) {
@@ -4307,7 +4987,6 @@ export class CreateRepoTradeDto implements ICreateRepoTradeDto {
     endDate?: Date;
     settlementDate?: Date;
     currency?: string | undefined;
-    haircut?: number | undefined;
     createdByUserId?: number;
 
     constructor(data?: ICreateRepoTradeDto) {
@@ -4332,7 +5011,6 @@ export class CreateRepoTradeDto implements ICreateRepoTradeDto {
             this.endDate = _data["endDate"] ? new Date(_data["endDate"].toString()) : undefined as any;
             this.settlementDate = _data["settlementDate"] ? new Date(_data["settlementDate"].toString()) : undefined as any;
             this.currency = _data["currency"];
-            this.haircut = _data["haircut"];
             this.createdByUserId = _data["createdByUserId"];
         }
     }
@@ -4357,7 +5035,6 @@ export class CreateRepoTradeDto implements ICreateRepoTradeDto {
         data["endDate"] = this.endDate ? this.endDate.toISOString() : undefined as any;
         data["settlementDate"] = this.settlementDate ? this.settlementDate.toISOString() : undefined as any;
         data["currency"] = this.currency;
-        data["haircut"] = this.haircut;
         data["createdByUserId"] = this.createdByUserId;
         return data;
     }
@@ -4375,7 +5052,70 @@ export interface ICreateRepoTradeDto {
     endDate?: Date;
     settlementDate?: Date;
     currency?: string | undefined;
-    haircut?: number | undefined;
+    createdByUserId?: number;
+}
+
+export class CreateSecurityDto implements ICreateSecurityDto {
+    isin?: string | undefined;
+    description?: string | undefined;
+    name?: string | undefined;
+    assetType?: string | undefined;
+    issuer?: string | undefined;
+    currency?: string | undefined;
+    maturityDate?: Date | undefined;
+    createdByUserId?: number;
+
+    constructor(data?: ICreateSecurityDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.isin = _data["isin"];
+            this.description = _data["description"];
+            this.name = _data["name"];
+            this.assetType = _data["assetType"];
+            this.issuer = _data["issuer"];
+            this.currency = _data["currency"];
+            this.maturityDate = _data["maturityDate"] ? new Date(_data["maturityDate"].toString()) : undefined as any;
+            this.createdByUserId = _data["createdByUserId"];
+        }
+    }
+
+    static fromJS(data: any): CreateSecurityDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateSecurityDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["isin"] = this.isin;
+        data["description"] = this.description;
+        data["name"] = this.name;
+        data["assetType"] = this.assetType;
+        data["issuer"] = this.issuer;
+        data["currency"] = this.currency;
+        data["maturityDate"] = this.maturityDate ? this.maturityDate.toISOString() : undefined as any;
+        data["createdByUserId"] = this.createdByUserId;
+        return data;
+    }
+}
+
+export interface ICreateSecurityDto {
+    isin?: string | undefined;
+    description?: string | undefined;
+    name?: string | undefined;
+    assetType?: string | undefined;
+    issuer?: string | undefined;
+    currency?: string | undefined;
+    maturityDate?: Date | undefined;
     createdByUserId?: number;
 }
 
@@ -4967,6 +5707,218 @@ export interface IFundFlatnessCheckDto {
     adjustmentType?: string | undefined;
 }
 
+export class PositionChangeDto implements IPositionChangeDto {
+    collateralTypeId?: number;
+    counterpartyId?: number;
+    securityId?: number;
+    securityMaturityDate?: Date;
+    fundId?: number;
+    newNotionalAmount?: number;
+    status?: string | undefined;
+
+    constructor(data?: IPositionChangeDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.collateralTypeId = _data["collateralTypeId"];
+            this.counterpartyId = _data["counterpartyId"];
+            this.securityId = _data["securityId"];
+            this.securityMaturityDate = _data["securityMaturityDate"] ? new Date(_data["securityMaturityDate"].toString()) : undefined as any;
+            this.fundId = _data["fundId"];
+            this.newNotionalAmount = _data["newNotionalAmount"];
+            this.status = _data["status"];
+        }
+    }
+
+    static fromJS(data: any): PositionChangeDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new PositionChangeDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["collateralTypeId"] = this.collateralTypeId;
+        data["counterpartyId"] = this.counterpartyId;
+        data["securityId"] = this.securityId;
+        data["securityMaturityDate"] = this.securityMaturityDate ? this.securityMaturityDate.toISOString() : undefined as any;
+        data["fundId"] = this.fundId;
+        data["newNotionalAmount"] = this.newNotionalAmount;
+        data["status"] = this.status;
+        return data;
+    }
+}
+
+export interface IPositionChangeDto {
+    collateralTypeId?: number;
+    counterpartyId?: number;
+    securityId?: number;
+    securityMaturityDate?: Date;
+    fundId?: number;
+    newNotionalAmount?: number;
+    status?: string | undefined;
+}
+
+export class PositionDto implements IPositionDto {
+    collateralTypeId?: number;
+    collateralTypeName?: string | undefined;
+    counterpartyId?: number;
+    counterpartyName?: string | undefined;
+    securityId?: number;
+    securityName?: string | undefined;
+    securityMaturityDate?: Date;
+    fundNotionals?: { [key: string]: number; } | undefined;
+    exposurePercentages?: { [key: string]: number; } | undefined;
+    statuses?: { [key: string]: string; } | undefined;
+
+    constructor(data?: IPositionDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.collateralTypeId = _data["collateralTypeId"];
+            this.collateralTypeName = _data["collateralTypeName"];
+            this.counterpartyId = _data["counterpartyId"];
+            this.counterpartyName = _data["counterpartyName"];
+            this.securityId = _data["securityId"];
+            this.securityName = _data["securityName"];
+            this.securityMaturityDate = _data["securityMaturityDate"] ? new Date(_data["securityMaturityDate"].toString()) : undefined as any;
+            if (_data["fundNotionals"]) {
+                this.fundNotionals = {} as any;
+                for (let key in _data["fundNotionals"]) {
+                    if (_data["fundNotionals"].hasOwnProperty(key))
+                        (this.fundNotionals as any)![key] = _data["fundNotionals"][key];
+                }
+            }
+            if (_data["exposurePercentages"]) {
+                this.exposurePercentages = {} as any;
+                for (let key in _data["exposurePercentages"]) {
+                    if (_data["exposurePercentages"].hasOwnProperty(key))
+                        (this.exposurePercentages as any)![key] = _data["exposurePercentages"][key];
+                }
+            }
+            if (_data["statuses"]) {
+                this.statuses = {} as any;
+                for (let key in _data["statuses"]) {
+                    if (_data["statuses"].hasOwnProperty(key))
+                        (this.statuses as any)![key] = _data["statuses"][key];
+                }
+            }
+        }
+    }
+
+    static fromJS(data: any): PositionDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new PositionDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["collateralTypeId"] = this.collateralTypeId;
+        data["collateralTypeName"] = this.collateralTypeName;
+        data["counterpartyId"] = this.counterpartyId;
+        data["counterpartyName"] = this.counterpartyName;
+        data["securityId"] = this.securityId;
+        data["securityName"] = this.securityName;
+        data["securityMaturityDate"] = this.securityMaturityDate ? this.securityMaturityDate.toISOString() : undefined as any;
+        if (this.fundNotionals) {
+            data["fundNotionals"] = {};
+            for (let key in this.fundNotionals) {
+                if (this.fundNotionals.hasOwnProperty(key))
+                    (data["fundNotionals"] as any)[key] = (this.fundNotionals as any)[key];
+            }
+        }
+        if (this.exposurePercentages) {
+            data["exposurePercentages"] = {};
+            for (let key in this.exposurePercentages) {
+                if (this.exposurePercentages.hasOwnProperty(key))
+                    (data["exposurePercentages"] as any)[key] = (this.exposurePercentages as any)[key];
+            }
+        }
+        if (this.statuses) {
+            data["statuses"] = {};
+            for (let key in this.statuses) {
+                if (this.statuses.hasOwnProperty(key))
+                    (data["statuses"] as any)[key] = (this.statuses as any)[key];
+            }
+        }
+        return data;
+    }
+}
+
+export interface IPositionDto {
+    collateralTypeId?: number;
+    collateralTypeName?: string | undefined;
+    counterpartyId?: number;
+    counterpartyName?: string | undefined;
+    securityId?: number;
+    securityName?: string | undefined;
+    securityMaturityDate?: Date;
+    fundNotionals?: { [key: string]: number; } | undefined;
+    exposurePercentages?: { [key: string]: number; } | undefined;
+    statuses?: { [key: string]: string; } | undefined;
+}
+
+export class PositionLockDto implements IPositionLockDto {
+    counterpartyId?: number;
+    collateralTypeId?: number;
+    fundId?: number;
+
+    constructor(data?: IPositionLockDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.counterpartyId = _data["counterpartyId"];
+            this.collateralTypeId = _data["collateralTypeId"];
+            this.fundId = _data["fundId"];
+        }
+    }
+
+    static fromJS(data: any): PositionLockDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new PositionLockDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["counterpartyId"] = this.counterpartyId;
+        data["collateralTypeId"] = this.collateralTypeId;
+        data["fundId"] = this.fundId;
+        return data;
+    }
+}
+
+export interface IPositionLockDto {
+    counterpartyId?: number;
+    collateralTypeId?: number;
+    fundId?: number;
+}
+
 export class PreviousDayRepoRateDto implements IPreviousDayRepoRateDto {
     id?: number;
     counterpartyId?: number;
@@ -5210,6 +6162,7 @@ export class RepoTradeDto implements IRepoTradeDto {
     createdBy?: string | undefined;
     modifiedDate?: Date | undefined;
     modifiedBy?: string | undefined;
+    security?: SecurityDto;
 
     constructor(data?: IRepoTradeDto) {
         if (data) {
@@ -5248,6 +6201,7 @@ export class RepoTradeDto implements IRepoTradeDto {
             this.createdBy = _data["createdBy"];
             this.modifiedDate = _data["modifiedDate"] ? new Date(_data["modifiedDate"].toString()) : undefined as any;
             this.modifiedBy = _data["modifiedBy"];
+            this.security = _data["security"] ? SecurityDto.fromJS(_data["security"]) : undefined as any;
         }
     }
 
@@ -5286,6 +6240,7 @@ export class RepoTradeDto implements IRepoTradeDto {
         data["createdBy"] = this.createdBy;
         data["modifiedDate"] = this.modifiedDate ? this.modifiedDate.toISOString() : undefined as any;
         data["modifiedBy"] = this.modifiedBy;
+        data["security"] = this.security ? this.security.toJSON() : undefined as any;
         return data;
     }
 }
@@ -5317,6 +6272,83 @@ export interface IRepoTradeDto {
     createdBy?: string | undefined;
     modifiedDate?: Date | undefined;
     modifiedBy?: string | undefined;
+    security?: SecurityDto;
+}
+
+export class SecurityDto implements ISecurityDto {
+    id?: number;
+    isin?: string | undefined;
+    description?: string | undefined;
+    assetType?: string | undefined;
+    issuer?: string | undefined;
+    currency?: string | undefined;
+    maturityDate?: Date | undefined;
+    createdByUserId?: number;
+    createdDate?: Date;
+    modifiedByUserId?: number | undefined;
+    modifiedDate?: Date | undefined;
+
+    constructor(data?: ISecurityDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.isin = _data["isin"];
+            this.description = _data["description"];
+            this.assetType = _data["assetType"];
+            this.issuer = _data["issuer"];
+            this.currency = _data["currency"];
+            this.maturityDate = _data["maturityDate"] ? new Date(_data["maturityDate"].toString()) : undefined as any;
+            this.createdByUserId = _data["createdByUserId"];
+            this.createdDate = _data["createdDate"] ? new Date(_data["createdDate"].toString()) : undefined as any;
+            this.modifiedByUserId = _data["modifiedByUserId"];
+            this.modifiedDate = _data["modifiedDate"] ? new Date(_data["modifiedDate"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): SecurityDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new SecurityDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["isin"] = this.isin;
+        data["description"] = this.description;
+        data["assetType"] = this.assetType;
+        data["issuer"] = this.issuer;
+        data["currency"] = this.currency;
+        data["maturityDate"] = this.maturityDate ? this.maturityDate.toISOString() : undefined as any;
+        data["createdByUserId"] = this.createdByUserId;
+        data["createdDate"] = this.createdDate ? this.createdDate.toISOString() : undefined as any;
+        data["modifiedByUserId"] = this.modifiedByUserId;
+        data["modifiedDate"] = this.modifiedDate ? this.modifiedDate.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface ISecurityDto {
+    id?: number;
+    isin?: string | undefined;
+    description?: string | undefined;
+    assetType?: string | undefined;
+    issuer?: string | undefined;
+    currency?: string | undefined;
+    maturityDate?: Date | undefined;
+    createdByUserId?: number;
+    createdDate?: Date;
+    modifiedByUserId?: number | undefined;
+    modifiedDate?: Date | undefined;
 }
 
 export class TargetCircleValidationDto implements ITargetCircleValidationDto {
@@ -5624,6 +6656,70 @@ export interface IUpdateRepoTradeDto {
     endDate?: Date;
     settlementDate?: Date;
     haircut?: number | undefined;
+    modifiedByUserId?: number;
+}
+
+export class UpdateSecurityDto implements IUpdateSecurityDto {
+    id?: number;
+    description?: string | undefined;
+    assetType?: string | undefined;
+    issuer?: string | undefined;
+    currency?: string | undefined;
+    maturityDate?: Date | undefined;
+    isActive?: boolean;
+    modifiedByUserId?: number;
+
+    constructor(data?: IUpdateSecurityDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.description = _data["description"];
+            this.assetType = _data["assetType"];
+            this.issuer = _data["issuer"];
+            this.currency = _data["currency"];
+            this.maturityDate = _data["maturityDate"] ? new Date(_data["maturityDate"].toString()) : undefined as any;
+            this.isActive = _data["isActive"];
+            this.modifiedByUserId = _data["modifiedByUserId"];
+        }
+    }
+
+    static fromJS(data: any): UpdateSecurityDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateSecurityDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["description"] = this.description;
+        data["assetType"] = this.assetType;
+        data["issuer"] = this.issuer;
+        data["currency"] = this.currency;
+        data["maturityDate"] = this.maturityDate ? this.maturityDate.toISOString() : undefined as any;
+        data["isActive"] = this.isActive;
+        data["modifiedByUserId"] = this.modifiedByUserId;
+        return data;
+    }
+}
+
+export interface IUpdateSecurityDto {
+    id?: number;
+    description?: string | undefined;
+    assetType?: string | undefined;
+    issuer?: string | undefined;
+    currency?: string | undefined;
+    maturityDate?: Date | undefined;
+    isActive?: boolean;
     modifiedByUserId?: number;
 }
 

@@ -12,9 +12,11 @@ import {
   FundsClient,
   RepoTradesClient,
   CounterpartiesClient,
-  CollateralTypesClient
+  CollateralTypesClient,
+  PositionsClient
 } from './api/client';
 import { AuthService } from './services/auth.service';
+import { SignalRService } from './services/signalr.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -33,14 +35,16 @@ export const appConfig: ApplicationConfig = {
         }
       ])
     ),
-    ThemeService,    
+    ThemeService,
     // NSwag API clients (marked @Injectable without providedIn) must be provided here
     AuthClient,
     RepoRatesClient,
+    PositionsClient,
     FundsClient,
     RepoTradesClient,
     CounterpartiesClient,
     CollateralTypesClient,
+    SignalRService,
     {
       provide: API_BASE_URL,
       useFactory: () => environment.apiUrl

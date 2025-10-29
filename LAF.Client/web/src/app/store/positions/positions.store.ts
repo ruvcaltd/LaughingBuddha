@@ -1,14 +1,24 @@
 import { signalStore, withState, withComputed, withMethods, patchState } from '@ngrx/signals';
 import { computed } from '@angular/core';
-import { IRepoTradeDto } from '../../api/client';
+import { IPositionLockDto, IRepoTradeDto } from '../../api/client';
 import { withDevtools } from '@angular-architects/ngrx-toolkit';
 
 
-export interface ITradeBlotterGridItem extends IRepoTradeDto {
+export interface ITradeBlotterGridItem {
   variance?: number;
   fundNotionals?: { [fundId: number]: number };
   fundExposurePercents?: { [fundId: number]: number };
   fundStatuses?: { [fundId: string]: string };
+  locked?: { [fundId: string]: boolean };
+  counterpartyId?: number;
+  securityId?: number;
+  securityName?: string | undefined;
+  collateralTypeId?: number;
+  collateralTypeName?: string | undefined;
+  rate?: number;
+  startDate?: Date;
+  endDate?: Date;
+  settlementDate?: Date;
 }
 
 export interface PositionsState {
@@ -50,26 +60,25 @@ export const PositionsStore = signalStore(
     },
     addPosition(trade: IRepoTradeDto) {
       patchState(state, { positions: [...state.positions(), trade] });
-    },
-    updatePosition(updatedPositionRow: IRepoTradeDto) {
-      const positions = state.positions().map(x => 
-        x.collateralTypeId === updatedPositionRow.collateralTypeId && x.counterpartyId === updatedPositionRow.counterpartyId  && x.fundCode === updatedPositionRow.fundCode ? updatedPositionRow : x
-      );
+    },    
+    lockPosition(lock: IPositionLockDto){
+      const positions = state.positions().map(pos => {
+        if (pos.collateralTypeId === lock.collateralTypeId && pos.counterpartyId === lock.counterpartyId) {
+          if(pos.locked) 
+            pos.locked[lock.fundId!] = true;
+        }
+        return pos;
+      });
       patchState(state, { positions });
     },
-    addOrUpatePosition(trade: IRepoTradeDto) {
-      const index = state.positions().findIndex(x => 
-        x.collateralTypeId === trade.collateralTypeId && x.counterpartyId === trade.counterpartyId  && x.fundCode === trade.fundCode
-      );
-      if (index !== -1) {        
-        const positions = state.positions().map((x, i) => i === index ? trade : x);
-        patchState(state, { positions });
-      } else {        
-        patchState(state, { positions: [...state.positions(), trade] });
-      }
-    },
-    removePosition(tradeId: number) {
-      const positions = state.positions().filter(trade => trade.id !== tradeId);
+    unlockPosition(lock: IPositionLockDto){
+      const positions = state.positions().map(pos => {
+        if (pos.collateralTypeId === lock.collateralTypeId && pos.counterpartyId === lock.counterpartyId) {
+          if(pos.locked) 
+            pos.locked[lock.fundId!] = false;
+        }
+        return pos;
+      });
       patchState(state, { positions });
     }
   }))
