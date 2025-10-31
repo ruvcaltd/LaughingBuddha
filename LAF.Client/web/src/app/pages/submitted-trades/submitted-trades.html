@@ -3,20 +3,121 @@
   <div class="mx-auto px-4 sm:px-6 lg:px-8 py-4">
     <div class="card">
       <div class="card-header">
-        <div class="flex items-center">
-          <svg class="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <h1 class="text-lg font-medium text-gray-900 dark:text-gray-100">Submitted Trades</h1>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <svg class="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h1 class="text-lg font-medium text-gray-900 dark:text-gray-100">Submitted Trades</h1>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Total:</span>
+            <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ submittedTrades().length }}</span>
+          </div>
         </div>
       </div>
       <div class="card-body">
-        <div class="text-center py-8">
+        <div *ngIf="error()" class="p-6">
+          <div class="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800 dark:text-red-200">
+                  Error loading data
+                </h3>
+                <div class="mt-2 text-sm text-red-700 dark:text-red-300">
+                  <p>{{ error() }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="!loading() && !error() && submittedTrades().length === 0" class="text-center py-8">
           <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">Submitted Trades</h3>
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Submitted trades functionality will be implemented here.</p>
+          <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No submitted trades</h3>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">There are no submitted trades to display.</p>
+        </div>
+
+        <div *ngIf="!loading() && !error() && submittedTrades().length > 0">
+          <dx-data-grid
+            [dataSource]="submittedTrades()"
+            [height]="600"
+            [showBorders]="true"
+            [columnAutoWidth]="true"
+            [allowColumnReordering]="true"
+            [allowColumnResizing]="true"
+            [rowAlternationEnabled]="true"
+            [editing]="gridOptions.editing"
+            [paging]="gridOptions.paging"
+            [pager]="gridOptions.pager"
+            [filterRow]="gridOptions.filterRow"
+            [headerFilter]="gridOptions.headerFilter"
+          >
+            <dxi-column dataField="id" caption="ID" dataType="number" width="80"></dxi-column>
+            <dxi-column dataField="tradeReference" caption="Trade Ref" width="120"></dxi-column>
+            <dxi-column dataField="status" caption="Status" width="100"></dxi-column>
+            <dxi-column dataField="fundCode" caption="Fund" width="100"></dxi-column>
+            <dxi-column dataField="counterpartyName" caption="Counterparty" width="150"></dxi-column>
+            <dxi-column dataField="collateralTypeName" caption="Collateral Type" width="150"></dxi-column>
+            <dxi-column dataField="direction" caption="Direction" width="100"></dxi-column>
+            <dxi-column 
+              dataField="notional" 
+              caption="Notional" 
+              dataType="number" 
+              format="$ #,##0.00,'M'"
+              width="120"
+            ></dxi-column>
+            <dxi-column 
+              dataField="rate" 
+              caption="Rate (%)" 
+              dataType="number" 
+              format="#.0####"
+              width="100"
+            ></dxi-column>
+            <dxi-column 
+              dataField="startDate" 
+              caption="Start Date" 
+              dataType="date"
+              format="yyyy-MM-dd"
+              width="120"
+            ></dxi-column>
+            <dxi-column 
+              dataField="endDate" 
+              caption="End Date" 
+              dataType="date"
+              format="yyyy-MM-dd"
+              width="120"
+            ></dxi-column>
+            <dxi-column 
+              dataField="settlementDate" 
+              caption="Settlement Date" 
+              dataType="date"
+              format="yyyy-MM-dd"
+              width="140"
+            ></dxi-column>
+            <dxi-column dataField="currency" caption="Currency" width="90"></dxi-column>
+            <dxi-column 
+              dataField="createdDate" 
+              caption="Created Date" 
+              dataType="datetime"
+              format="yyyy-MM-dd HH:mm"
+              width="150"
+            ></dxi-column>
+            <dxi-column dataField="createdBy" caption="Created By" width="120"></dxi-column>
+
+            <dxo-load-panel [enabled]="loading()"></dxo-load-panel>
+          </dx-data-grid>
         </div>
       </div>
     </div>
