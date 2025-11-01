@@ -87,20 +87,10 @@ namespace LAF.Services.Repositories
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<RepoTrade>> GetTradesByCounterpartyAndDateAsync(int counterpartyId, DateTime tradeDate)
+        public async Task<decimal> GetTotalNotionalByCounterpartyCollateralTypeAndDateAsync(int counterpartyId, int collateralTypeId, DateTime tradeDate)
         {
             return await _context.RepoTrades
-                .Include(rt => rt.Security)
-                .Include(rt => rt.Fund)
-                .Where(rt => rt.CounterpartyId == counterpartyId && rt.StartDate <= tradeDate && rt.MaturityDate >= tradeDate)
-                .OrderByDescending(rt => rt.CreatedDate)
-                .ToListAsync();
-        }
-
-        public async Task<decimal> GetTotalNotionalByCounterpartyAndDateAsync(int counterpartyId, DateTime tradeDate)
-        {
-            return await _context.RepoTrades
-                .Where(rt => rt.CounterpartyId == counterpartyId && rt.StartDate <= tradeDate && rt.MaturityDate >= tradeDate)
+                .Where(rt => rt.CounterpartyId == counterpartyId && rt.CollateralTypeId == collateralTypeId && rt.StartDate <= tradeDate && rt.MaturityDate >= tradeDate)
                 .SumAsync(rt => rt.Notional);
         }
 

@@ -15,5 +15,7 @@ namespace LAF.Dtos
         public int FundId { get; set; }
         public decimal NewNotionalAmount { get; set; }
         public string Status { get; set; } = "Pending"; // or "Success" or "Failed"
+
+        public string? ErrorMessage { get; set; }
     }
 }

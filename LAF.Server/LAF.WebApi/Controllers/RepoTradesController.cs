@@ -346,23 +346,5 @@ namespace LAF.WebApi.Controllers
             }
         }
 
-        [HttpPost("validate-target-circle")]
-        public async Task<ActionResult<TargetCircleValidationDto>> ValidateTargetCircle(
-            [FromQuery] int counterpartyId,
-            [FromQuery] DateTime tradeDate,
-            [FromQuery] decimal proposedNotional)
-        {
-            try
-            {
-                var validation = await _targetCircleService.ValidateTradeAgainstTargetCircleAsync(
-                    counterpartyId, tradeDate, proposedNotional);
-                return Ok(validation);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error validating TargetCircle");
-                return StatusCode(500, new { error = "An error occurred while validating TargetCircle" });
-            }
-        }
     }
 }

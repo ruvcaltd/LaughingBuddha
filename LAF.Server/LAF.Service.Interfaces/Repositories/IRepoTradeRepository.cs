@@ -15,8 +15,7 @@ namespace LAF.Service.Interfaces.Repositories
         Task UpdateAsync(RepoTrade repoTrade);
         Task DeleteAsync(int id);
         Task<IEnumerable<RepoTrade>> GetTradesByFundAndDateAsync(int fundId, DateTime tradeDate);
-        Task<IEnumerable<RepoTrade>> GetTradesByCounterpartyAndDateAsync(int counterpartyId, DateTime tradeDate);
-        Task<decimal> GetTotalNotionalByCounterpartyAndDateAsync(int counterpartyId, DateTime tradeDate);
+        Task<decimal> GetTotalNotionalByCounterpartyCollateralTypeAndDateAsync(int counterpartyId, int collateralTypeId, DateTime tradeDate);
         Task<IEnumerable<RepoTrade>> GetActiveTradesAsync(DateTime asOfDate);
         Task<IEnumerable<RepoTrade>> GetTradesBySettlementDateAsync(DateTime settlementDate);
     }

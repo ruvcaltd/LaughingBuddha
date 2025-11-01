@@ -89,7 +89,7 @@ namespace LAF.Services.Services
 
                 // Check TargetCircle limits
                 var targetCircleValidation = await _targetCircleService.ValidateTradeAgainstTargetCircleAsync(
-                    createDto.CounterpartyId, createDto.StartDate, createDto.Notional);
+                    createDto.CounterpartyId, createDto.CollateralTypeId, createDto.StartDate, createDto.Notional);
 
                 if (!targetCircleValidation.IsWithinLimit)
                 {

@@ -69,8 +69,8 @@ namespace LAF.Services.Mappers
             DateTime tradeDate, decimal currentExposure, decimal proposedNotional, decimal targetCircle)
         {
             var newTotalExposure = currentExposure + proposedNotional;
-            var isWithinLimit = newTotalExposure <= targetCircle * 1000000; // TargetCircle is in millions
-            var utilizationPercentage = targetCircle > 0 ? (newTotalExposure / (targetCircle * 1000000)) * 100 : 0;
+            var isWithinLimit = newTotalExposure <= targetCircle; // TargetCircle is in millions
+            var utilizationPercentage = targetCircle > 0 ? (newTotalExposure / (targetCircle)) * 100 : 0;
 
             return new TargetCircleValidationDto
             {
@@ -85,7 +85,7 @@ namespace LAF.Services.Mappers
                 LimitUtilizationPercentage = utilizationPercentage,
                 ValidationMessage = isWithinLimit
                     ? "Trade is within TargetCircle limit"
-                    : $"Trade exceeds TargetCircle limit of {targetCircle}M by {newTotalExposure - (targetCircle * 1000000):C}"
+                    : $"Trade exceeds TargetCircle limit of ${targetCircle: #,#} by ${newTotalExposure - (targetCircle): #,#}"
             };
         }
     }

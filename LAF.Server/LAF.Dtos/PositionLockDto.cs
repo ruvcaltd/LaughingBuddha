@@ -19,5 +19,15 @@ namespace LAF.Dtos
         /// The ID of the fund
         /// </summary>
         public int FundId { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the object is locked.
+        /// </summary>
+        public bool Locked { get; set; } = true;
+
+        /// <summary>
+        /// User who has locked the position
+        /// </summary>
+        public string? UserDisplay { get; set; }
     }
 }

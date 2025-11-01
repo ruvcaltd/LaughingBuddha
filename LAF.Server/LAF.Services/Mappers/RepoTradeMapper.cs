@@ -64,7 +64,7 @@ namespace LAF.Services.Mappers
                 Rate = dto.Rate,
                 StartDate = dto.StartDate,
                 MaturityDate = dto.EndDate, // Map EndDate to MaturityDate
-                TradeDate = dto.SettlementDate, // Map SettlementDate to TradeDate
+                TradeDate = dto.StartDate, // Map SettlementDate to TradeDate
                 Status = "Pending",
                 CreatedBy = dto.CreatedByUserId,
                 CreatedAt = DateTimeOffset.UtcNow,

@@ -57,7 +57,7 @@ namespace LAF.Services.Services
                     FundCode = account.Fund?.FundCode,
                     FundName = account.Fund?.FundName,
                     CurrencyCode = account.CurrencyCode,
-                    CurrentBalance = netCashflow,
+                    CurrentBalance = (account.Balance ?? 0) + netCashflow,
                     AsOfDate = asOfDate
                 };
             }

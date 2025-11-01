@@ -29,15 +29,16 @@ namespace LAF.Services.Services
             _logger = logger;
         }
 
-        public async Task<TargetCircleValidationDto> ValidateTradeAgainstTargetCircleAsync(int counterpartyId, DateTime tradeDate, decimal proposedNotional)
+
+        public async Task<TargetCircleValidationDto> ValidateTradeAgainstTargetCircleAsync(int counterpartyId, int collateralTypeId, DateTime tradeDate, decimal proposedNotional)
         {
             try
             {
                 // Get current exposure for the counterparty on the trade date
-                var currentExposure = await GetCurrentExposureAsync(counterpartyId, tradeDate);
+                var currentExposure = await GetCurrentExposureAsync(counterpartyId, collateralTypeId, tradeDate);
 
                 // Get TargetCircle for the counterparty on the trade date
-                var targetCircle = await GetTargetCircleAsync(counterpartyId, tradeDate);
+                var targetCircle = await GetTargetCircleAsync(counterpartyId, collateralTypeId, tradeDate);
 
                 // Get counterparty name
                 var counterparty = await _counterpartyRepository.GetByIdAsync(counterpartyId);
@@ -53,18 +54,18 @@ namespace LAF.Services.Services
             }
         }
 
-        public async Task<bool> IsTradeWithinTargetCircleAsync(int counterpartyId, DateTime tradeDate, decimal proposedNotional)
+        public async Task<bool> IsTradeWithinTargetCircleAsync(int counterpartyId, int collateralTypeId, DateTime tradeDate, decimal proposedNotional)
         {
-            var validation = await ValidateTradeAgainstTargetCircleAsync(counterpartyId, tradeDate, proposedNotional);
+            var validation = await ValidateTradeAgainstTargetCircleAsync(counterpartyId, collateralTypeId, tradeDate, proposedNotional);
             return validation.IsWithinLimit;
         }
 
-        public async Task<decimal> GetCurrentExposureAsync(int counterpartyId, DateTime tradeDate)
+        public async Task<decimal> GetCurrentExposureAsync(int counterpartyId, int collateralTypeId, DateTime tradeDate)
         {
             try
             {
                 // Get total notional of all active trades for this counterparty on the trade date
-                var totalNotional = await _repoTradeRepository.GetTotalNotionalByCounterpartyAndDateAsync(counterpartyId, tradeDate);
+                var totalNotional = await _repoTradeRepository.GetTotalNotionalByCounterpartyCollateralTypeAndDateAsync(counterpartyId, collateralTypeId, tradeDate);
                 return totalNotional;
             }
             catch (Exception ex)
@@ -74,20 +75,20 @@ namespace LAF.Services.Services
             }
         }
 
-        public async Task<decimal> GetTargetCircleAsync(int counterpartyId, DateTime tradeDate)
+        public async Task<decimal> GetTargetCircleAsync(int counterpartyId, int collateralTypeId, DateTime tradeDate)
         {
             try
             {
                 // Get the repo rate for the counterparty on the trade date
                 // We need to specify a collateral type, so we'll get the most restrictive one
                 var repoRates = await _repoRateRepository.FindAsync(rr =>
-                    rr.CounterpartyId == counterpartyId && rr.EffectiveDate == tradeDate);
+                    rr.CounterpartyId == counterpartyId && rr.CollateralTypeId == collateralTypeId && rr.EffectiveDate == tradeDate);
 
                 var repoRate = repoRates.OrderBy(rr => rr.TargetCircle).FirstOrDefault();
 
                 if (repoRate == null)
                 {
-                    _logger.LogWarning("No TargetCircle found for counterparty {CounterpartyId} on date {TradeDate}", counterpartyId, tradeDate);
+                    _logger.LogWarning("No TargetCircle found for counterparty {CounterpartyId}, {CollateralTypeId} on date {TradeDate}", counterpartyId, collateralTypeId, tradeDate);
                     return 0;
                 }
 
@@ -95,20 +96,20 @@ namespace LAF.Services.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting TargetCircle for counterparty {CounterpartyId}", counterpartyId);
+                _logger.LogError(ex, "Error getting TargetCircle for counterparty {CounterpartyId} and {CollateralTypeId}", counterpartyId, collateralTypeId);
                 throw;
             }
         }
 
-        public async Task<CounterpartyExposureDto> GetCounterpartyExposureAsync(int counterpartyId, DateTime tradeDate)
+        public async Task<CounterpartyExposureDto> GetCounterpartyExposureAsync(int counterpartyId, int collateralTypeId, DateTime tradeDate)
         {
             try
             {
                 // Get current exposure
-                var currentExposure = await GetCurrentExposureAsync(counterpartyId, tradeDate);
+                var currentExposure = await GetCurrentExposureAsync(counterpartyId, collateralTypeId, tradeDate);
 
                 // Get TargetCircle
-                var targetCircle = await GetTargetCircleAsync(counterpartyId, tradeDate);
+                var targetCircle = await GetTargetCircleAsync(counterpartyId, collateralTypeId, tradeDate);
 
                 // Get counterparty details
                 var counterparty = await _counterpartyRepository.GetByIdAsync(counterpartyId);
@@ -117,9 +118,9 @@ namespace LAF.Services.Services
                     throw new KeyNotFoundException($"Counterparty with ID {counterpartyId} not found");
                 }
 
-                var availableLimit = Math.Max(0, (targetCircle * 1000000) - currentExposure);
-                var utilizationPercentage = targetCircle > 0 ? (currentExposure / (targetCircle * 1000000)) * 100 : 0;
-                var isLimitBreached = currentExposure > (targetCircle * 1000000);
+                var availableLimit = Math.Max(0, (targetCircle) - currentExposure);
+                var utilizationPercentage = targetCircle > 0 ? (currentExposure / (targetCircle)) * 100 : 0;
+                var isLimitBreached = currentExposure > (targetCircle);
 
                 return new CounterpartyExposureDto
                 {
@@ -140,107 +141,6 @@ namespace LAF.Services.Services
             }
         }
 
-        public async Task<IEnumerable<CounterpartyExposureDto>> GetAllCounterpartyExposuresAsync(DateTime tradeDate)
-        {
-            try
-            {
-                var activeCounterparties = await _counterpartyRepository.GetActiveCounterpartiesAsync();
-                var exposures = new List<CounterpartyExposureDto>();
 
-                foreach (var counterparty in activeCounterparties)
-                {
-                    try
-                    {
-                        var exposure = await GetCounterpartyExposureAsync(counterparty.Id, tradeDate);
-                        exposures.Add(exposure);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Error getting exposure for counterparty {CounterpartyId}", counterparty.Id);
-                        // Continue with other counterparties
-                    }
-                }
-
-                return exposures.OrderByDescending(e => e.UtilizationPercentage);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting all counterparty exposures");
-                throw;
-            }
-        }
-
-        public async Task<IEnumerable<CounterpartyExposureDto>> GetLimitBreachesAsync(DateTime tradeDate)
-        {
-            try
-            {
-                var allExposures = await GetAllCounterpartyExposuresAsync(tradeDate);
-                return allExposures.Where(e => e.IsLimitBreached).OrderByDescending(e => e.UtilizationPercentage);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting limit breaches");
-                throw;
-            }
-        }
-
-        public async Task<IEnumerable<CounterpartyExposureDto>> GetHighUtilizationCounterpartiesAsync(DateTime tradeDate, decimal thresholdPercentage = 80m)
-        {
-            try
-            {
-                var allExposures = await GetAllCounterpartyExposuresAsync(tradeDate);
-                return allExposures.Where(e => e.UtilizationPercentage >= thresholdPercentage)
-                                  .OrderByDescending(e => e.UtilizationPercentage);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting high utilization counterparties");
-                throw;
-            }
-        }
-
-        public async Task<bool> ValidateRepoRateExistsAsync(int counterpartyId, int collateralTypeId, DateTime repoDate)
-        {
-            try
-            {
-                return await _repoRateRepository.RepoRateExistsAsync(counterpartyId, collateralTypeId, repoDate);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error validating repo rate existence");
-                throw;
-            }
-        }
-
-        public async Task<IEnumerable<TargetCircleValidationDto>> ValidateMultipleTradesAsync(
-            int counterpartyId, DateTime tradeDate, IEnumerable<decimal> proposedNotionals)
-        {
-            var validations = new List<TargetCircleValidationDto>();
-            var counterparty = await _counterpartyRepository.GetByIdAsync(counterpartyId);
-            var counterpartyName = counterparty?.CounterpartyName ?? "Unknown";
-
-            var currentExposure = await GetCurrentExposureAsync(counterpartyId, tradeDate);
-            var targetCircle = await GetTargetCircleAsync(counterpartyId, tradeDate);
-            var runningTotal = currentExposure;
-
-            foreach (var notional in proposedNotionals)
-            {
-                runningTotal += notional;
-                var validation = RepoRateMapper.ToValidationDto(counterpartyId, counterpartyName, tradeDate,
-                    currentExposure, notional, targetCircle);
-
-                // Update with running total instead of individual notional
-                validation.NewTotalExposure = runningTotal;
-                validation.IsWithinLimit = runningTotal <= targetCircle * 1000000;
-                validation.LimitUtilizationPercentage = targetCircle > 0 ? (runningTotal / (targetCircle * 1000000)) * 100 : 0;
-                validation.ValidationMessage = validation.IsWithinLimit
-                    ? "Trade is within TargetCircle limit"
-                    : $"Cumulative trades exceed TargetCircle limit of {targetCircle}M by {runningTotal - (targetCircle * 1000000):C}";
-
-                validations.Add(validation);
-            }
-
-            return validations;
-        }
     }
 }

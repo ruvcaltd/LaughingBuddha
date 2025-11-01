@@ -119,7 +119,7 @@ namespace LAF.Services.Repositories
         public async Task<decimal> GetNetCashflowByAccountAsync(int cashAccountId, DateTime asOfDate)
         {
             return await _context.Cashflows
-                .Where(cf => cf.CashAccountId == cashAccountId && cf.CashflowDate <= asOfDate)
+                .Where(cf => cf.CashAccountId == cashAccountId && cf.CashflowDate.Date <= asOfDate.Date)
                 .SumAsync(cf => cf.Amount);
         }
     }

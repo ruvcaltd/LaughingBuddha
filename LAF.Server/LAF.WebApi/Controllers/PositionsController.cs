@@ -119,7 +119,7 @@ namespace LAF.WebApi.Controllers
                     CounterpartyId = positionChange.CounterpartyId,
                     CollateralTypeId = positionChange.CollateralTypeId,
                     SecurityId = security.Id,
-                    Notional = tradeNotional,
+                    Notional = Math.Abs(tradeNotional),
                     Rate = rate.RepoRate1,
                     StartDate = DateTime.UtcNow.Date,
                     EndDate = DateTime.UtcNow.Date.AddDays(1), // TODO: use business days
@@ -142,6 +142,11 @@ namespace LAF.WebApi.Controllers
                     await hub.Clients.All.SendAsync("NewTrade", trade);
 
                     positionChange.Status = "Success";
+                }
+                catch (InvalidOperationException e)
+                {
+                    positionChange.Status = "Failed";
+                    positionChange.ErrorMessage = e.Message;
                 }
                 catch (Exception)
                 {
@@ -183,6 +188,8 @@ namespace LAF.WebApi.Controllers
                     StartDateTo = targetDate
                 };
 
+                var rates = await _repoRateRepository.GetRepoRatesByDateAsync(targetDate, false);
+
                 var trades = await _repoTradeService.FindAsync(query);
 
                 // Group trades by collateral type, counterparty and security
@@ -197,6 +204,7 @@ namespace LAF.WebApi.Controllers
                         SecurityId = g.Key.SecurityId,
                         SecurityName = g.First().SecurityName,
                         SecurityMaturityDate = g.First().Security?.MaturityDate?.Date ?? DateTime.Today.AddDays(1), //TODO: adjust as needed
+                        Variance = rates.Where(r => r.CollateralTypeId == g.Key.CollateralTypeId && r.CounterpartyId == g.Key.CounterpartyId).Sum(x => x.TargetCircle) - g.Sum(t => t.Notional),
                         // Group by fund to get fund-specific notionals and statuses
                         FundNotionals = g.GroupBy(t => t.FundId)
                             .ToDictionary(
@@ -241,6 +249,8 @@ namespace LAF.WebApi.Controllers
         {
             try
             {
+                var email = User.FindFirst(ClaimTypes.Email)?.Value ?? "Unknown";
+                lockInfo.UserDisplay = email;
                 var connectionId = HttpContext.Connection.Id;
                 await hub.Clients.AllExcept(connectionId).SendAsync("PositionCellEditing", lockInfo);
                 return Ok();

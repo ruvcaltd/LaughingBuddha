@@ -48,7 +48,7 @@ namespace LAF.Tests.Services
             var targetCircle = 10m; // 10M
 
             _mockRepoTradeRepository
-                .Setup(x => x.GetTotalNotionalByCounterpartyAndDateAsync(counterpartyId, tradeDate))
+                .Setup(x => x.GetTotalNotionalByCounterpartyCollateralTypeAndDateAsync(counterpartyId, tradeDate))
                 .ReturnsAsync(currentExposure);
 
             var repoRates = new List<DataAccess.Models.RepoRate>
@@ -96,7 +96,7 @@ namespace LAF.Tests.Services
             var targetCircle = 10m; // 10M
 
             _mockRepoTradeRepository
-                .Setup(x => x.GetTotalNotionalByCounterpartyAndDateAsync(counterpartyId, tradeDate))
+                .Setup(x => x.GetTotalNotionalByCounterpartyCollateralTypeAndDateAsync(counterpartyId, tradeDate))
                 .ReturnsAsync(currentExposure);
 
             var repoRates = new List<DataAccess.Models.RepoRate>
@@ -136,7 +136,7 @@ namespace LAF.Tests.Services
             var expectedExposure = 3000000m; // 3M
 
             _mockRepoTradeRepository
-                .Setup(x => x.GetTotalNotionalByCounterpartyAndDateAsync(counterpartyId, tradeDate))
+                .Setup(x => x.GetTotalNotionalByCounterpartyCollateralTypeAndDateAsync(counterpartyId, tradeDate))
                 .ReturnsAsync(expectedExposure);
 
             // Act
@@ -185,7 +185,7 @@ namespace LAF.Tests.Services
             var targetCircle = 10m; // 10M
 
             _mockRepoTradeRepository
-                .Setup(x => x.GetTotalNotionalByCounterpartyAndDateAsync(counterpartyId, tradeDate))
+                .Setup(x => x.GetTotalNotionalByCounterpartyCollateralTypeAndDateAsync(counterpartyId, tradeDate))
                 .ReturnsAsync(currentExposure);
 
             var repoRates = new List<DataAccess.Models.RepoRate>
@@ -229,7 +229,7 @@ namespace LAF.Tests.Services
             var proposedNotional = 1000000m; // 1M
 
             _mockRepoTradeRepository
-                .Setup(x => x.GetTotalNotionalByCounterpartyAndDateAsync(counterpartyId, tradeDate))
+                .Setup(x => x.GetTotalNotionalByCounterpartyCollateralTypeAndDateAsync(counterpartyId, tradeDate))
                 .ReturnsAsync(5000000m); // 5M current exposure
 
             var repoRates = new List<DataAccess.Models.RepoRate>
@@ -282,12 +282,12 @@ namespace LAF.Tests.Services
 
             // Counterparty 1: within limit (5M exposure, 10M target)
             _mockRepoTradeRepository
-                .Setup(x => x.GetTotalNotionalByCounterpartyAndDateAsync(1, tradeDate))
+                .Setup(x => x.GetTotalNotionalByCounterpartyCollateralTypeAndDateAsync(1, tradeDate))
                 .ReturnsAsync(5000000m);
 
             // Counterparty 2: exceeds limit (12M exposure, 10M target)
             _mockRepoTradeRepository
-                .Setup(x => x.GetTotalNotionalByCounterpartyAndDateAsync(2, tradeDate))
+                .Setup(x => x.GetTotalNotionalByCounterpartyCollateralTypeAndDateAsync(2, tradeDate))
                 .ReturnsAsync(12000000m);
 
             var repoRates = new List<DataAccess.Models.RepoRate>
