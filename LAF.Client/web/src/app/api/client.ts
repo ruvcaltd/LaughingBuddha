@@ -97,19 +97,217 @@ export class AuthClient implements IAuthClient {
     }
 }
 
+export interface ICashflowClient {
+    /**
+     * @return OK
+     */
+    daily(asOfDate: Date): Observable<FundAccountCashflowsDto[]>;
+    /**
+     * @param body (optional) 
+     * @return Created
+     */
+    cashflowPOST(body: CreateCashflowDto | undefined): Observable<CashflowDto>;
+    /**
+     * @return No Content
+     */
+    cashflowDELETE(id: number): Observable<void>;
+}
+
+@Injectable()
+export class CashflowClient implements ICashflowClient {
+    private http: HttpClient;
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(@Inject(HttpClient) http: HttpClient, @Optional() @Inject(API_BASE_URL) baseUrl?: string) {
+        this.http = http;
+        this.baseUrl = baseUrl ?? "";
+    }
+
+    /**
+     * @return OK
+     */
+    daily(asOfDate: Date): Observable<FundAccountCashflowsDto[]> {
+        let url_ = this.baseUrl + "/api/Cashflow/daily/{asOfDate}";
+        if (asOfDate === undefined || asOfDate === null)
+            throw new globalThis.Error("The parameter 'asOfDate' must be defined.");
+        url_ = url_.replace("{asOfDate}", encodeURIComponent(asOfDate ? "" + asOfDate.toISOString() : "null"));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_ : any = {
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processDaily(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processDaily(response_ as any);
+                } catch (e) {
+                    return _observableThrow(e) as any as Observable<FundAccountCashflowsDto[]>;
+                }
+            } else
+                return _observableThrow(response_) as any as Observable<FundAccountCashflowsDto[]>;
+        }));
+    }
+
+    protected processDaily(response: HttpResponseBase): Observable<FundAccountCashflowsDto[]> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (response as any).error instanceof Blob ? (response as any).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(FundAccountCashflowsDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return _observableOf(result200);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf(null as any);
+    }
+
+    /**
+     * @param body (optional) 
+     * @return Created
+     */
+    cashflowPOST(body: CreateCashflowDto | undefined): Observable<CashflowDto> {
+        let url_ = this.baseUrl + "/api/Cashflow";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_ : any = {
+            body: content_,
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processCashflowPOST(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processCashflowPOST(response_ as any);
+                } catch (e) {
+                    return _observableThrow(e) as any as Observable<CashflowDto>;
+                }
+            } else
+                return _observableThrow(response_) as any as Observable<CashflowDto>;
+        }));
+    }
+
+    protected processCashflowPOST(response: HttpResponseBase): Observable<CashflowDto> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (response as any).error instanceof Blob ? (response as any).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 201) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result201: any = null;
+            let resultData201 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result201 = CashflowDto.fromJS(resultData201);
+            return _observableOf(result201);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf(null as any);
+    }
+
+    /**
+     * @return No Content
+     */
+    cashflowDELETE(id: number): Observable<void> {
+        let url_ = this.baseUrl + "/api/Cashflow/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_ : any = {
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+            })
+        };
+
+        return this.http.request("delete", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processCashflowDELETE(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processCashflowDELETE(response_ as any);
+                } catch (e) {
+                    return _observableThrow(e) as any as Observable<void>;
+                }
+            } else
+                return _observableThrow(response_) as any as Observable<void>;
+        }));
+    }
+
+    protected processCashflowDELETE(response: HttpResponseBase): Observable<void> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (response as any).error instanceof Blob ? (response as any).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return _observableOf(null as any);
+            }));
+        } else if (status === 404) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            }));
+        } else if (status === 500) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("Internal Server Error", status, _responseText, _headers);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf(null as any);
+    }
+}
+
 export interface ICollateralTypesClient {
     /**
      * @return OK
      */
-    collateralTypesAll(): Observable<CollateralTypeDto[]>;
-    /**
-     * @return OK
-     */
-    active(): Observable<CollateralTypeDto[]>;
-    /**
-     * @return OK
-     */
-    collateralTypes(id: number): Observable<CollateralTypeDto>;
+    collateralTypes(): Observable<CollateralTypeDto[]>;
 }
 
 @Injectable()
@@ -126,127 +324,8 @@ export class CollateralTypesClient implements ICollateralTypesClient {
     /**
      * @return OK
      */
-    collateralTypesAll(): Observable<CollateralTypeDto[]> {
+    collateralTypes(): Observable<CollateralTypeDto[]> {
         let url_ = this.baseUrl + "/api/CollateralTypes";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processCollateralTypesAll(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processCollateralTypesAll(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<CollateralTypeDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<CollateralTypeDto[]>;
-        }));
-    }
-
-    protected processCollateralTypesAll(response: HttpResponseBase): Observable<CollateralTypeDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(CollateralTypeDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    active(): Observable<CollateralTypeDto[]> {
-        let url_ = this.baseUrl + "/api/CollateralTypes/active";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processActive(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processActive(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<CollateralTypeDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<CollateralTypeDto[]>;
-        }));
-    }
-
-    protected processActive(response: HttpResponseBase): Observable<CollateralTypeDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(CollateralTypeDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    collateralTypes(id: number): Observable<CollateralTypeDto> {
-        let url_ = this.baseUrl + "/api/CollateralTypes/{id}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
         url_ = url_.replace(/[?&]$/, "");
 
         let options_ : any = {
@@ -264,14 +343,14 @@ export class CollateralTypesClient implements ICollateralTypesClient {
                 try {
                     return this.processCollateralTypes(response_ as any);
                 } catch (e) {
-                    return _observableThrow(e) as any as Observable<CollateralTypeDto>;
+                    return _observableThrow(e) as any as Observable<CollateralTypeDto[]>;
                 }
             } else
-                return _observableThrow(response_) as any as Observable<CollateralTypeDto>;
+                return _observableThrow(response_) as any as Observable<CollateralTypeDto[]>;
         }));
     }
 
-    protected processCollateralTypes(response: HttpResponseBase): Observable<CollateralTypeDto> {
+    protected processCollateralTypes(response: HttpResponseBase): Observable<CollateralTypeDto[]> {
         const status = response.status;
         const responseBlob =
             response instanceof HttpResponse ? response.body :
@@ -282,7 +361,14 @@ export class CollateralTypesClient implements ICollateralTypesClient {
             return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = CollateralTypeDto.fromJS(resultData200);
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(CollateralTypeDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
             return _observableOf(result200);
             }));
         } else if (status !== 200 && status !== 204) {
@@ -298,37 +384,7 @@ export interface ICounterpartiesClient {
     /**
      * @return OK
      */
-    counterpartiesAll(): Observable<CounterpartyDto[]>;
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    counterpartiesPOST(body: CreateCounterpartyDto | undefined): Observable<CounterpartyDto>;
-    /**
-     * @return OK
-     */
-    active2(): Observable<CounterpartyDto[]>;
-    /**
-     * @return OK
-     */
-    counterpartiesGET(id: number): Observable<CounterpartyDto>;
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    counterpartiesPUT(id: number, body: UpdateCounterpartyDto | undefined): Observable<CounterpartyDto>;
-    /**
-     * @return OK
-     */
-    exposure(id: number, tradeDate: Date): Observable<CounterpartyExposureDto>;
-    /**
-     * @return OK
-     */
-    exposures(tradeDate: Date): Observable<CounterpartyExposureDto[]>;
-    /**
-     * @return OK
-     */
-    limitBreaches(tradeDate: Date): Observable<CounterpartyExposureDto[]>;
+    counterparties(): Observable<CounterpartyDto[]>;
 }
 
 @Injectable()
@@ -345,7 +401,7 @@ export class CounterpartiesClient implements ICounterpartiesClient {
     /**
      * @return OK
      */
-    counterpartiesAll(): Observable<CounterpartyDto[]> {
+    counterparties(): Observable<CounterpartyDto[]> {
         let url_ = this.baseUrl + "/api/Counterparties";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -358,11 +414,11 @@ export class CounterpartiesClient implements ICounterpartiesClient {
         };
 
         return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processCounterpartiesAll(response_);
+            return this.processCounterparties(response_);
         })).pipe(_observableCatch((response_: any) => {
             if (response_ instanceof HttpResponseBase) {
                 try {
-                    return this.processCounterpartiesAll(response_ as any);
+                    return this.processCounterparties(response_ as any);
                 } catch (e) {
                     return _observableThrow(e) as any as Observable<CounterpartyDto[]>;
                 }
@@ -371,7 +427,7 @@ export class CounterpartiesClient implements ICounterpartiesClient {
         }));
     }
 
-    protected processCounterpartiesAll(response: HttpResponseBase): Observable<CounterpartyDto[]> {
+    protected processCounterparties(response: HttpResponseBase): Observable<CounterpartyDto[]> {
         const status = response.status;
         const responseBlob =
             response instanceof HttpResponse ? response.body :
@@ -390,817 +446,6 @@ export class CounterpartiesClient implements ICounterpartiesClient {
             else {
                 result200 = null as any;
             }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    counterpartiesPOST(body: CreateCounterpartyDto | undefined): Observable<CounterpartyDto> {
-        let url_ = this.baseUrl + "/api/Counterparties";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_ : any = {
-            body: content_,
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processCounterpartiesPOST(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processCounterpartiesPOST(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<CounterpartyDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<CounterpartyDto>;
-        }));
-    }
-
-    protected processCounterpartiesPOST(response: HttpResponseBase): Observable<CounterpartyDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = CounterpartyDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    active2(): Observable<CounterpartyDto[]> {
-        let url_ = this.baseUrl + "/api/Counterparties/active";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processActive2(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processActive2(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<CounterpartyDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<CounterpartyDto[]>;
-        }));
-    }
-
-    protected processActive2(response: HttpResponseBase): Observable<CounterpartyDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(CounterpartyDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    counterpartiesGET(id: number): Observable<CounterpartyDto> {
-        let url_ = this.baseUrl + "/api/Counterparties/{id}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processCounterpartiesGET(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processCounterpartiesGET(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<CounterpartyDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<CounterpartyDto>;
-        }));
-    }
-
-    protected processCounterpartiesGET(response: HttpResponseBase): Observable<CounterpartyDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = CounterpartyDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    counterpartiesPUT(id: number, body: UpdateCounterpartyDto | undefined): Observable<CounterpartyDto> {
-        let url_ = this.baseUrl + "/api/Counterparties/{id}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_ : any = {
-            body: content_,
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("put", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processCounterpartiesPUT(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processCounterpartiesPUT(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<CounterpartyDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<CounterpartyDto>;
-        }));
-    }
-
-    protected processCounterpartiesPUT(response: HttpResponseBase): Observable<CounterpartyDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = CounterpartyDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    exposure(id: number, tradeDate: Date): Observable<CounterpartyExposureDto> {
-        let url_ = this.baseUrl + "/api/Counterparties/{id}/exposure/{tradeDate}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        if (tradeDate === undefined || tradeDate === null)
-            throw new globalThis.Error("The parameter 'tradeDate' must be defined.");
-        url_ = url_.replace("{tradeDate}", encodeURIComponent(tradeDate ? "" + tradeDate.toISOString() : "null"));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processExposure(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processExposure(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<CounterpartyExposureDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<CounterpartyExposureDto>;
-        }));
-    }
-
-    protected processExposure(response: HttpResponseBase): Observable<CounterpartyExposureDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = CounterpartyExposureDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    exposures(tradeDate: Date): Observable<CounterpartyExposureDto[]> {
-        let url_ = this.baseUrl + "/api/Counterparties/exposures/{tradeDate}";
-        if (tradeDate === undefined || tradeDate === null)
-            throw new globalThis.Error("The parameter 'tradeDate' must be defined.");
-        url_ = url_.replace("{tradeDate}", encodeURIComponent(tradeDate ? "" + tradeDate.toISOString() : "null"));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processExposures(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processExposures(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<CounterpartyExposureDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<CounterpartyExposureDto[]>;
-        }));
-    }
-
-    protected processExposures(response: HttpResponseBase): Observable<CounterpartyExposureDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(CounterpartyExposureDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    limitBreaches(tradeDate: Date): Observable<CounterpartyExposureDto[]> {
-        let url_ = this.baseUrl + "/api/Counterparties/limit-breaches/{tradeDate}";
-        if (tradeDate === undefined || tradeDate === null)
-            throw new globalThis.Error("The parameter 'tradeDate' must be defined.");
-        url_ = url_.replace("{tradeDate}", encodeURIComponent(tradeDate ? "" + tradeDate.toISOString() : "null"));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processLimitBreaches(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processLimitBreaches(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<CounterpartyExposureDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<CounterpartyExposureDto[]>;
-        }));
-    }
-
-    protected processLimitBreaches(response: HttpResponseBase): Observable<CounterpartyExposureDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(CounterpartyExposureDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-}
-
-export interface IEagleIntegrationClient {
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    importCashBalances(body: EagleImportRequestDto | undefined): Observable<EagleImportResponseDto>;
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    exportEndOfDayBalances(body: EagleExportRequestDto | undefined): Observable<EagleExportResponseDto>;
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    generateFlatFundBalances(body: EagleExportRequestDto | undefined): Observable<EagleExportResponseDto>;
-    /**
-     * @return OK
-     */
-    prepareEndOfDayBalances(exportDate: Date): Observable<FundBalanceExportDto[]>;
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    validateImportData(body: EagleImportRequestDto | undefined): Observable<boolean>;
-    /**
-     * @param fundCode (optional) 
-     * @param openingBalance (optional) 
-     * @param currency (optional) 
-     * @param balanceDate (optional) 
-     * @return OK
-     */
-    processCashBalance(fundCode: string | undefined, openingBalance: number | undefined, currency: string | undefined, balanceDate: Date | undefined): Observable<boolean>;
-}
-
-@Injectable()
-export class EagleIntegrationClient implements IEagleIntegrationClient {
-    private http: HttpClient;
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(@Inject(HttpClient) http: HttpClient, @Optional() @Inject(API_BASE_URL) baseUrl?: string) {
-        this.http = http;
-        this.baseUrl = baseUrl ?? "";
-    }
-
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    importCashBalances(body: EagleImportRequestDto | undefined): Observable<EagleImportResponseDto> {
-        let url_ = this.baseUrl + "/api/EagleIntegration/import-cash-balances";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_ : any = {
-            body: content_,
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processImportCashBalances(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processImportCashBalances(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<EagleImportResponseDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<EagleImportResponseDto>;
-        }));
-    }
-
-    protected processImportCashBalances(response: HttpResponseBase): Observable<EagleImportResponseDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = EagleImportResponseDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    exportEndOfDayBalances(body: EagleExportRequestDto | undefined): Observable<EagleExportResponseDto> {
-        let url_ = this.baseUrl + "/api/EagleIntegration/export-end-of-day-balances";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_ : any = {
-            body: content_,
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processExportEndOfDayBalances(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processExportEndOfDayBalances(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<EagleExportResponseDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<EagleExportResponseDto>;
-        }));
-    }
-
-    protected processExportEndOfDayBalances(response: HttpResponseBase): Observable<EagleExportResponseDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = EagleExportResponseDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    generateFlatFundBalances(body: EagleExportRequestDto | undefined): Observable<EagleExportResponseDto> {
-        let url_ = this.baseUrl + "/api/EagleIntegration/generate-flat-fund-balances";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_ : any = {
-            body: content_,
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processGenerateFlatFundBalances(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processGenerateFlatFundBalances(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<EagleExportResponseDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<EagleExportResponseDto>;
-        }));
-    }
-
-    protected processGenerateFlatFundBalances(response: HttpResponseBase): Observable<EagleExportResponseDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = EagleExportResponseDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    prepareEndOfDayBalances(exportDate: Date): Observable<FundBalanceExportDto[]> {
-        let url_ = this.baseUrl + "/api/EagleIntegration/prepare-end-of-day-balances/{exportDate}";
-        if (exportDate === undefined || exportDate === null)
-            throw new globalThis.Error("The parameter 'exportDate' must be defined.");
-        url_ = url_.replace("{exportDate}", encodeURIComponent(exportDate ? "" + exportDate.toISOString() : "null"));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processPrepareEndOfDayBalances(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processPrepareEndOfDayBalances(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<FundBalanceExportDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<FundBalanceExportDto[]>;
-        }));
-    }
-
-    protected processPrepareEndOfDayBalances(response: HttpResponseBase): Observable<FundBalanceExportDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(FundBalanceExportDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    validateImportData(body: EagleImportRequestDto | undefined): Observable<boolean> {
-        let url_ = this.baseUrl + "/api/EagleIntegration/validate-import-data";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_ : any = {
-            body: content_,
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processValidateImportData(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processValidateImportData(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<boolean>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<boolean>;
-        }));
-    }
-
-    protected processValidateImportData(response: HttpResponseBase): Observable<boolean> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-                result200 = resultData200 !== undefined ? resultData200 : null as any;
-    
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @param fundCode (optional) 
-     * @param openingBalance (optional) 
-     * @param currency (optional) 
-     * @param balanceDate (optional) 
-     * @return OK
-     */
-    processCashBalance(fundCode: string | undefined, openingBalance: number | undefined, currency: string | undefined, balanceDate: Date | undefined): Observable<boolean> {
-        let url_ = this.baseUrl + "/api/EagleIntegration/process-cash-balance?";
-        if (fundCode === null)
-            throw new globalThis.Error("The parameter 'fundCode' cannot be null.");
-        else if (fundCode !== undefined)
-            url_ += "fundCode=" + encodeURIComponent("" + fundCode) + "&";
-        if (openingBalance === null)
-            throw new globalThis.Error("The parameter 'openingBalance' cannot be null.");
-        else if (openingBalance !== undefined)
-            url_ += "openingBalance=" + encodeURIComponent("" + openingBalance) + "&";
-        if (currency === null)
-            throw new globalThis.Error("The parameter 'currency' cannot be null.");
-        else if (currency !== undefined)
-            url_ += "currency=" + encodeURIComponent("" + currency) + "&";
-        if (balanceDate === null)
-            throw new globalThis.Error("The parameter 'balanceDate' cannot be null.");
-        else if (balanceDate !== undefined)
-            url_ += "balanceDate=" + encodeURIComponent(balanceDate ? "" + balanceDate.toISOString() : "") + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processProcessCashBalance(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processProcessCashBalance(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<boolean>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<boolean>;
-        }));
-    }
-
-    protected processProcessCashBalance(response: HttpResponseBase): Observable<boolean> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-                result200 = resultData200 !== undefined ? resultData200 : null as any;
-    
             return _observableOf(result200);
             }));
         } else if (status !== 200 && status !== 204) {
@@ -1216,61 +461,11 @@ export interface IFundsClient {
     /**
      * @return OK
      */
-    fundsAll(): Observable<FundDto[]>;
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    fundsPOST(body: CreateFundDto | undefined): Observable<FundDto>;
-    /**
-     * @return OK
-     */
-    active3(): Observable<FundDto[]>;
-    /**
-     * @return OK
-     */
-    fundsGET(id: number): Observable<FundDto>;
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    fundsPUT(id: number, body: UpdateFundDto | undefined): Observable<FundDto>;
-    /**
-     * @return OK
-     */
-    code(fundCode: string): Observable<FundDto>;
-    /**
-     * @return OK
-     */
-    balance(id: number, asOfDate: Date): Observable<FundBalanceDto>;
-    /**
-     * @return OK
-     */
     balances(asOfDate: Date): Observable<FundBalanceDto[]>;
     /**
      * @return OK
      */
-    flatness(id: number, checkDate: Date): Observable<FundFlatnessCheckDto>;
-    /**
-     * @return OK
-     */
-    flatnessAll(checkDate: Date): Observable<FundFlatnessCheckDto[]>;
-    /**
-     * @param fromDate (optional) 
-     * @param toDate (optional) 
-     * @return OK
-     */
-    cashflows(id: number, fromDate: Date | undefined, toDate: Date | undefined): Observable<CashflowDto[]>;
-    /**
-     * @param fromDate (optional) 
-     * @param toDate (optional) 
-     * @return OK
-     */
-    cashflowSummary(id: number, fromDate: Date | undefined, toDate: Date | undefined): Observable<FundCashflowSummaryDto>;
-    /**
-     * @return OK
-     */
-    ensureFlatness(id: number, date: Date): Observable<void>;
+    flatten(asOfDate: Date): Observable<void>;
 }
 
 @Injectable()
@@ -1282,402 +477,6 @@ export class FundsClient implements IFundsClient {
     constructor(@Inject(HttpClient) http: HttpClient, @Optional() @Inject(API_BASE_URL) baseUrl?: string) {
         this.http = http;
         this.baseUrl = baseUrl ?? "";
-    }
-
-    /**
-     * @return OK
-     */
-    fundsAll(): Observable<FundDto[]> {
-        let url_ = this.baseUrl + "/api/Funds";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processFundsAll(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processFundsAll(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<FundDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<FundDto[]>;
-        }));
-    }
-
-    protected processFundsAll(response: HttpResponseBase): Observable<FundDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(FundDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    fundsPOST(body: CreateFundDto | undefined): Observable<FundDto> {
-        let url_ = this.baseUrl + "/api/Funds";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_ : any = {
-            body: content_,
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processFundsPOST(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processFundsPOST(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<FundDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<FundDto>;
-        }));
-    }
-
-    protected processFundsPOST(response: HttpResponseBase): Observable<FundDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = FundDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    active3(): Observable<FundDto[]> {
-        let url_ = this.baseUrl + "/api/Funds/active";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processActive3(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processActive3(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<FundDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<FundDto[]>;
-        }));
-    }
-
-    protected processActive3(response: HttpResponseBase): Observable<FundDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(FundDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    fundsGET(id: number): Observable<FundDto> {
-        let url_ = this.baseUrl + "/api/Funds/{id}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processFundsGET(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processFundsGET(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<FundDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<FundDto>;
-        }));
-    }
-
-    protected processFundsGET(response: HttpResponseBase): Observable<FundDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = FundDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    fundsPUT(id: number, body: UpdateFundDto | undefined): Observable<FundDto> {
-        let url_ = this.baseUrl + "/api/Funds/{id}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_ : any = {
-            body: content_,
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("put", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processFundsPUT(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processFundsPUT(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<FundDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<FundDto>;
-        }));
-    }
-
-    protected processFundsPUT(response: HttpResponseBase): Observable<FundDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = FundDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    code(fundCode: string): Observable<FundDto> {
-        let url_ = this.baseUrl + "/api/Funds/code/{fundCode}";
-        if (fundCode === undefined || fundCode === null)
-            throw new globalThis.Error("The parameter 'fundCode' must be defined.");
-        url_ = url_.replace("{fundCode}", encodeURIComponent("" + fundCode));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processCode(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processCode(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<FundDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<FundDto>;
-        }));
-    }
-
-    protected processCode(response: HttpResponseBase): Observable<FundDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = FundDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    balance(id: number, asOfDate: Date): Observable<FundBalanceDto> {
-        let url_ = this.baseUrl + "/api/Funds/{id}/balance/{asOfDate}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        if (asOfDate === undefined || asOfDate === null)
-            throw new globalThis.Error("The parameter 'asOfDate' must be defined.");
-        url_ = url_.replace("{asOfDate}", encodeURIComponent(asOfDate ? "" + asOfDate.toISOString() : "null"));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processBalance(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processBalance(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<FundBalanceDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<FundBalanceDto>;
-        }));
-    }
-
-    protected processBalance(response: HttpResponseBase): Observable<FundBalanceDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = FundBalanceDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
     }
 
     /**
@@ -1744,282 +543,26 @@ export class FundsClient implements IFundsClient {
     /**
      * @return OK
      */
-    flatness(id: number, checkDate: Date): Observable<FundFlatnessCheckDto> {
-        let url_ = this.baseUrl + "/api/Funds/{id}/flatness/{checkDate}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        if (checkDate === undefined || checkDate === null)
-            throw new globalThis.Error("The parameter 'checkDate' must be defined.");
-        url_ = url_.replace("{checkDate}", encodeURIComponent(checkDate ? "" + checkDate.toISOString() : "null"));
+    flatten(asOfDate: Date): Observable<void> {
+        let url_ = this.baseUrl + "/api/Funds/flatten/{asOfDate}";
+        if (asOfDate === undefined || asOfDate === null)
+            throw new globalThis.Error("The parameter 'asOfDate' must be defined.");
+        url_ = url_.replace("{asOfDate}", encodeURIComponent(asOfDate ? "" + asOfDate.toISOString() : "null"));
         url_ = url_.replace(/[?&]$/, "");
 
         let options_ : any = {
             observe: "response",
             responseType: "blob",
             headers: new HttpHeaders({
-                "Accept": "application/json"
             })
         };
 
         return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processFlatness(response_);
+            return this.processFlatten(response_);
         })).pipe(_observableCatch((response_: any) => {
             if (response_ instanceof HttpResponseBase) {
                 try {
-                    return this.processFlatness(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<FundFlatnessCheckDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<FundFlatnessCheckDto>;
-        }));
-    }
-
-    protected processFlatness(response: HttpResponseBase): Observable<FundFlatnessCheckDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = FundFlatnessCheckDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    flatnessAll(checkDate: Date): Observable<FundFlatnessCheckDto[]> {
-        let url_ = this.baseUrl + "/api/Funds/flatness/{checkDate}";
-        if (checkDate === undefined || checkDate === null)
-            throw new globalThis.Error("The parameter 'checkDate' must be defined.");
-        url_ = url_.replace("{checkDate}", encodeURIComponent(checkDate ? "" + checkDate.toISOString() : "null"));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processFlatnessAll(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processFlatnessAll(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<FundFlatnessCheckDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<FundFlatnessCheckDto[]>;
-        }));
-    }
-
-    protected processFlatnessAll(response: HttpResponseBase): Observable<FundFlatnessCheckDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(FundFlatnessCheckDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @param fromDate (optional) 
-     * @param toDate (optional) 
-     * @return OK
-     */
-    cashflows(id: number, fromDate: Date | undefined, toDate: Date | undefined): Observable<CashflowDto[]> {
-        let url_ = this.baseUrl + "/api/Funds/{id}/cashflows?";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        if (fromDate === null)
-            throw new globalThis.Error("The parameter 'fromDate' cannot be null.");
-        else if (fromDate !== undefined)
-            url_ += "fromDate=" + encodeURIComponent(fromDate ? "" + fromDate.toISOString() : "") + "&";
-        if (toDate === null)
-            throw new globalThis.Error("The parameter 'toDate' cannot be null.");
-        else if (toDate !== undefined)
-            url_ += "toDate=" + encodeURIComponent(toDate ? "" + toDate.toISOString() : "") + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processCashflows(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processCashflows(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<CashflowDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<CashflowDto[]>;
-        }));
-    }
-
-    protected processCashflows(response: HttpResponseBase): Observable<CashflowDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(CashflowDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @param fromDate (optional) 
-     * @param toDate (optional) 
-     * @return OK
-     */
-    cashflowSummary(id: number, fromDate: Date | undefined, toDate: Date | undefined): Observable<FundCashflowSummaryDto> {
-        let url_ = this.baseUrl + "/api/Funds/{id}/cashflow-summary?";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        if (fromDate === null)
-            throw new globalThis.Error("The parameter 'fromDate' cannot be null.");
-        else if (fromDate !== undefined)
-            url_ += "fromDate=" + encodeURIComponent(fromDate ? "" + fromDate.toISOString() : "") + "&";
-        if (toDate === null)
-            throw new globalThis.Error("The parameter 'toDate' cannot be null.");
-        else if (toDate !== undefined)
-            url_ += "toDate=" + encodeURIComponent(toDate ? "" + toDate.toISOString() : "") + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processCashflowSummary(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processCashflowSummary(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<FundCashflowSummaryDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<FundCashflowSummaryDto>;
-        }));
-    }
-
-    protected processCashflowSummary(response: HttpResponseBase): Observable<FundCashflowSummaryDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = FundCashflowSummaryDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    ensureFlatness(id: number, date: Date): Observable<void> {
-        let url_ = this.baseUrl + "/api/Funds/{id}/ensure-flatness/{date}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        if (date === undefined || date === null)
-            throw new globalThis.Error("The parameter 'date' must be defined.");
-        url_ = url_.replace("{date}", encodeURIComponent(date ? "" + date.toISOString() : "null"));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-            })
-        };
-
-        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processEnsureFlatness(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processEnsureFlatness(response_ as any);
+                    return this.processFlatten(response_ as any);
                 } catch (e) {
                     return _observableThrow(e) as any as Observable<void>;
                 }
@@ -2028,7 +571,7 @@ export class FundsClient implements IFundsClient {
         }));
     }
 
-    protected processEnsureFlatness(response: HttpResponseBase): Observable<void> {
+    protected processFlatten(response: HttpResponseBase): Observable<void> {
         const status = response.status;
         const responseBlob =
             response instanceof HttpResponse ? response.body :
@@ -2289,20 +832,7 @@ export interface IRepoRatesClient {
     /**
      * @return OK
      */
-    repoRatesGET(id: number): Observable<RepoRateDto>;
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    repoRatesPUT(id: number, body: UpdateRepoRateDto | undefined): Observable<RepoRateDto>;
-    /**
-     * @return OK
-     */
     date(repoDate: Date): Observable<RepoRateDto[]>;
-    /**
-     * @return OK
-     */
-    counterparty(counterpartyId: number): Observable<RepoRateDto[]>;
     /**
      * @param currentDate (optional) 
      * @return OK
@@ -2310,9 +840,19 @@ export interface IRepoRatesClient {
     previousDay(currentDate: Date | undefined): Observable<PreviousDayRepoRateDto[]>;
     /**
      * @param body (optional) 
+     * @return OK
+     */
+    newDay(body: Date | undefined): Observable<void>;
+    /**
+     * @param body (optional) 
      * @return Created
      */
     repoRatesPOST(body: CreateRepoRateDto | undefined): Observable<RepoRateDto>;
+    /**
+     * @param body (optional) 
+     * @return OK
+     */
+    repoRatesPUT(id: number, body: UpdateRepoRateDto | undefined): Observable<boolean>;
     /**
      * @return OK
      */
@@ -2321,19 +861,6 @@ export interface IRepoRatesClient {
      * @return OK
      */
     setActive(id: number): Observable<RepoRateDto>;
-    /**
-     * @return OK
-     */
-    active4(asOfDate: Date): Observable<RepoRateDto[]>;
-    /**
-     * @param counterpartyId (optional) 
-     * @param collateralTypeId (optional) 
-     * @param fromDate (optional) 
-     * @param toDate (optional) 
-     * @param activeOnly (optional) 
-     * @return OK
-     */
-    search(counterpartyId: number | undefined, collateralTypeId: number | undefined, fromDate: Date | undefined, toDate: Date | undefined, activeOnly: boolean | undefined): Observable<RepoRateDto[]>;
 }
 
 @Injectable()
@@ -2345,119 +872,6 @@ export class RepoRatesClient implements IRepoRatesClient {
     constructor(@Inject(HttpClient) http: HttpClient, @Optional() @Inject(API_BASE_URL) baseUrl?: string) {
         this.http = http;
         this.baseUrl = baseUrl ?? "";
-    }
-
-    /**
-     * @return OK
-     */
-    repoRatesGET(id: number): Observable<RepoRateDto> {
-        let url_ = this.baseUrl + "/api/RepoRates/{id}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processRepoRatesGET(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processRepoRatesGET(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<RepoRateDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<RepoRateDto>;
-        }));
-    }
-
-    protected processRepoRatesGET(response: HttpResponseBase): Observable<RepoRateDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = RepoRateDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    repoRatesPUT(id: number, body: UpdateRepoRateDto | undefined): Observable<RepoRateDto> {
-        let url_ = this.baseUrl + "/api/RepoRates/{id}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_ : any = {
-            body: content_,
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("put", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processRepoRatesPUT(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processRepoRatesPUT(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<RepoRateDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<RepoRateDto>;
-        }));
-    }
-
-    protected processRepoRatesPUT(response: HttpResponseBase): Observable<RepoRateDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = RepoRateDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
     }
 
     /**
@@ -2493,67 +907,6 @@ export class RepoRatesClient implements IRepoRatesClient {
     }
 
     protected processDate(response: HttpResponseBase): Observable<RepoRateDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(RepoRateDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    counterparty(counterpartyId: number): Observable<RepoRateDto[]> {
-        let url_ = this.baseUrl + "/api/RepoRates/counterparty/{counterpartyId}";
-        if (counterpartyId === undefined || counterpartyId === null)
-            throw new globalThis.Error("The parameter 'counterpartyId' must be defined.");
-        url_ = url_.replace("{counterpartyId}", encodeURIComponent("" + counterpartyId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processCounterparty(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processCounterparty(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<RepoRateDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<RepoRateDto[]>;
-        }));
-    }
-
-    protected processCounterparty(response: HttpResponseBase): Observable<RepoRateDto[]> {
         const status = response.status;
         const responseBlob =
             response instanceof HttpResponse ? response.body :
@@ -2647,6 +1000,58 @@ export class RepoRatesClient implements IRepoRatesClient {
 
     /**
      * @param body (optional) 
+     * @return OK
+     */
+    newDay(body: Date | undefined): Observable<void> {
+        let url_ = this.baseUrl + "/api/RepoRates/new-day";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_ : any = {
+            body: content_,
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Content-Type": "application/json",
+            })
+        };
+
+        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processNewDay(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processNewDay(response_ as any);
+                } catch (e) {
+                    return _observableThrow(e) as any as Observable<void>;
+                }
+            } else
+                return _observableThrow(response_) as any as Observable<void>;
+        }));
+    }
+
+    protected processNewDay(response: HttpResponseBase): Observable<void> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (response as any).error instanceof Blob ? (response as any).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return _observableOf(null as any);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf(null as any);
+    }
+
+    /**
+     * @param body (optional) 
      * @return Created
      */
     repoRatesPOST(body: CreateRepoRateDto | undefined): Observable<RepoRateDto> {
@@ -2692,6 +1097,66 @@ export class RepoRatesClient implements IRepoRatesClient {
             let resultData201 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
             result201 = RepoRateDto.fromJS(resultData201);
             return _observableOf(result201);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf(null as any);
+    }
+
+    /**
+     * @param body (optional) 
+     * @return OK
+     */
+    repoRatesPUT(id: number, body: UpdateRepoRateDto | undefined): Observable<boolean> {
+        let url_ = this.baseUrl + "/api/RepoRates/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_ : any = {
+            body: content_,
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("put", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processRepoRatesPUT(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processRepoRatesPUT(response_ as any);
+                } catch (e) {
+                    return _observableThrow(e) as any as Observable<boolean>;
+                }
+            } else
+                return _observableThrow(response_) as any as Observable<boolean>;
+        }));
+    }
+
+    protected processRepoRatesPUT(response: HttpResponseBase): Observable<boolean> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (response as any).error instanceof Blob ? (response as any).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+                result200 = resultData200 !== undefined ? resultData200 : null as any;
+    
+            return _observableOf(result200);
             }));
         } else if (status !== 200 && status !== 204) {
             return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
@@ -2808,175 +1273,9 @@ export class RepoRatesClient implements IRepoRatesClient {
         }
         return _observableOf(null as any);
     }
-
-    /**
-     * @return OK
-     */
-    active4(asOfDate: Date): Observable<RepoRateDto[]> {
-        let url_ = this.baseUrl + "/api/RepoRates/active/{asOfDate}";
-        if (asOfDate === undefined || asOfDate === null)
-            throw new globalThis.Error("The parameter 'asOfDate' must be defined.");
-        url_ = url_.replace("{asOfDate}", encodeURIComponent(asOfDate ? "" + asOfDate.toISOString() : "null"));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processActive4(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processActive4(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<RepoRateDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<RepoRateDto[]>;
-        }));
-    }
-
-    protected processActive4(response: HttpResponseBase): Observable<RepoRateDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(RepoRateDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @param counterpartyId (optional) 
-     * @param collateralTypeId (optional) 
-     * @param fromDate (optional) 
-     * @param toDate (optional) 
-     * @param activeOnly (optional) 
-     * @return OK
-     */
-    search(counterpartyId: number | undefined, collateralTypeId: number | undefined, fromDate: Date | undefined, toDate: Date | undefined, activeOnly: boolean | undefined): Observable<RepoRateDto[]> {
-        let url_ = this.baseUrl + "/api/RepoRates/search?";
-        if (counterpartyId === null)
-            throw new globalThis.Error("The parameter 'counterpartyId' cannot be null.");
-        else if (counterpartyId !== undefined)
-            url_ += "counterpartyId=" + encodeURIComponent("" + counterpartyId) + "&";
-        if (collateralTypeId === null)
-            throw new globalThis.Error("The parameter 'collateralTypeId' cannot be null.");
-        else if (collateralTypeId !== undefined)
-            url_ += "collateralTypeId=" + encodeURIComponent("" + collateralTypeId) + "&";
-        if (fromDate === null)
-            throw new globalThis.Error("The parameter 'fromDate' cannot be null.");
-        else if (fromDate !== undefined)
-            url_ += "fromDate=" + encodeURIComponent(fromDate ? "" + fromDate.toISOString() : "") + "&";
-        if (toDate === null)
-            throw new globalThis.Error("The parameter 'toDate' cannot be null.");
-        else if (toDate !== undefined)
-            url_ += "toDate=" + encodeURIComponent(toDate ? "" + toDate.toISOString() : "") + "&";
-        if (activeOnly === null)
-            throw new globalThis.Error("The parameter 'activeOnly' cannot be null.");
-        else if (activeOnly !== undefined)
-            url_ += "activeOnly=" + encodeURIComponent("" + activeOnly) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processSearch(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processSearch(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<RepoRateDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<RepoRateDto[]>;
-        }));
-    }
-
-    protected processSearch(response: HttpResponseBase): Observable<RepoRateDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(RepoRateDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
 }
 
 export interface IRepoTradesClient {
-    /**
-     * @return OK
-     */
-    repoTradesAll(): Observable<RepoTradeDto[]>;
-    /**
-     * @param body (optional) 
-     * @return Created
-     */
-    repoTradesPOST(body: CreateRepoTradeDto | undefined): Observable<RepoRateDto>;
-    /**
-     * @return OK
-     */
-    repoTradesGET(id: number): Observable<RepoTradeDto>;
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    repoTradesPUT(id: number, body: UpdateRepoTradeDto | undefined): Observable<RepoTradeDto>;
-    /**
-     * @return OK
-     */
-    repoTradesDELETE(id: number): Observable<void>;
     /**
      * @param fundId (optional) 
      * @param counterpartyId (optional) 
@@ -2988,43 +1287,12 @@ export interface IRepoTradesClient {
      * @param direction (optional) 
      * @return OK
      */
-    search2(fundId: number | undefined, counterpartyId: number | undefined, collateralTypeId: number | undefined, startDateFrom: Date | undefined, startDateTo: Date | undefined, settlementDate: Date | undefined, status: string | undefined, direction: string | undefined): Observable<RepoTradeDto[]>;
-    /**
-     * @return OK
-     */
-    fund(fundId: number): Observable<RepoTradeDto[]>;
-    /**
-     * @return OK
-     */
-    active5(asOfDate: Date): Observable<RepoTradeDto[]>;
-    /**
-     * @return OK
-     */
-    settlement(settlementDate: Date): Observable<RepoTradeDto[]>;
-    /**
-     * @return OK
-     */
-    settle(id: number): Observable<RepoTradeDto>;
-    /**
-     * @return OK
-     */
-    mature(id: number): Observable<RepoTradeDto>;
-    /**
-     * @return OK
-     */
-    cancel(id: number): Observable<RepoTradeDto>;
+    search(fundId: number | undefined, counterpartyId: number | undefined, collateralTypeId: number | undefined, startDateFrom: Date | undefined, startDateTo: Date | undefined, settlementDate: Date | undefined, status: string | undefined, direction: string | undefined): Observable<RepoTradeDto[]>;
     /**
      * @param body (optional) 
      * @return OK
      */
-    validate(body: CreateRepoTradeDto | undefined): Observable<boolean>;
-    /**
-     * @param counterpartyId (optional) 
-     * @param tradeDate (optional) 
-     * @param proposedNotional (optional) 
-     * @return OK
-     */
-    validateTargetCircle(counterpartyId: number | undefined, tradeDate: Date | undefined, proposedNotional: number | undefined): Observable<TargetCircleValidationDto>;
+    submit(body: number[] | undefined): Observable<RepoTradeDto[]>;
 }
 
 @Injectable()
@@ -3039,283 +1307,6 @@ export class RepoTradesClient implements IRepoTradesClient {
     }
 
     /**
-     * @return OK
-     */
-    repoTradesAll(): Observable<RepoTradeDto[]> {
-        let url_ = this.baseUrl + "/api/RepoTrades";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processRepoTradesAll(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processRepoTradesAll(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<RepoTradeDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<RepoTradeDto[]>;
-        }));
-    }
-
-    protected processRepoTradesAll(response: HttpResponseBase): Observable<RepoTradeDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(RepoTradeDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @param body (optional) 
-     * @return Created
-     */
-    repoTradesPOST(body: CreateRepoTradeDto | undefined): Observable<RepoRateDto> {
-        let url_ = this.baseUrl + "/api/RepoTrades";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_ : any = {
-            body: content_,
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processRepoTradesPOST(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processRepoTradesPOST(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<RepoRateDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<RepoRateDto>;
-        }));
-    }
-
-    protected processRepoTradesPOST(response: HttpResponseBase): Observable<RepoRateDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 201) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result201: any = null;
-            let resultData201 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result201 = RepoRateDto.fromJS(resultData201);
-            return _observableOf(result201);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    repoTradesGET(id: number): Observable<RepoTradeDto> {
-        let url_ = this.baseUrl + "/api/RepoTrades/{id}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processRepoTradesGET(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processRepoTradesGET(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<RepoTradeDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<RepoTradeDto>;
-        }));
-    }
-
-    protected processRepoTradesGET(response: HttpResponseBase): Observable<RepoTradeDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = RepoTradeDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @param body (optional) 
-     * @return OK
-     */
-    repoTradesPUT(id: number, body: UpdateRepoTradeDto | undefined): Observable<RepoTradeDto> {
-        let url_ = this.baseUrl + "/api/RepoTrades/{id}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_ : any = {
-            body: content_,
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("put", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processRepoTradesPUT(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processRepoTradesPUT(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<RepoTradeDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<RepoTradeDto>;
-        }));
-    }
-
-    protected processRepoTradesPUT(response: HttpResponseBase): Observable<RepoTradeDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = RepoTradeDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    repoTradesDELETE(id: number): Observable<void> {
-        let url_ = this.baseUrl + "/api/RepoTrades/{id}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-            })
-        };
-
-        return this.http.request("delete", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processRepoTradesDELETE(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processRepoTradesDELETE(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<void>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<void>;
-        }));
-    }
-
-    protected processRepoTradesDELETE(response: HttpResponseBase): Observable<void> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return _observableOf(null as any);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
      * @param fundId (optional) 
      * @param counterpartyId (optional) 
      * @param collateralTypeId (optional) 
@@ -3326,7 +1317,7 @@ export class RepoTradesClient implements IRepoTradesClient {
      * @param direction (optional) 
      * @return OK
      */
-    search2(fundId: number | undefined, counterpartyId: number | undefined, collateralTypeId: number | undefined, startDateFrom: Date | undefined, startDateTo: Date | undefined, settlementDate: Date | undefined, status: string | undefined, direction: string | undefined): Observable<RepoTradeDto[]> {
+    search(fundId: number | undefined, counterpartyId: number | undefined, collateralTypeId: number | undefined, startDateFrom: Date | undefined, startDateTo: Date | undefined, settlementDate: Date | undefined, status: string | undefined, direction: string | undefined): Observable<RepoTradeDto[]> {
         let url_ = this.baseUrl + "/api/RepoTrades/search?";
         if (fundId === null)
             throw new globalThis.Error("The parameter 'fundId' cannot be null.");
@@ -3371,11 +1362,11 @@ export class RepoTradesClient implements IRepoTradesClient {
         };
 
         return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processSearch2(response_);
+            return this.processSearch(response_);
         })).pipe(_observableCatch((response_: any) => {
             if (response_ instanceof HttpResponseBase) {
                 try {
-                    return this.processSearch2(response_ as any);
+                    return this.processSearch(response_ as any);
                 } catch (e) {
                     return _observableThrow(e) as any as Observable<RepoTradeDto[]>;
                 }
@@ -3384,7 +1375,7 @@ export class RepoTradesClient implements IRepoTradesClient {
         }));
     }
 
-    protected processSearch2(response: HttpResponseBase): Observable<RepoTradeDto[]> {
+    protected processSearch(response: HttpResponseBase): Observable<RepoTradeDto[]> {
         const status = response.status;
         const responseBlob =
             response instanceof HttpResponse ? response.body :
@@ -3403,351 +1394,6 @@ export class RepoTradesClient implements IRepoTradesClient {
             else {
                 result200 = null as any;
             }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    fund(fundId: number): Observable<RepoTradeDto[]> {
-        let url_ = this.baseUrl + "/api/RepoTrades/fund/{fundId}";
-        if (fundId === undefined || fundId === null)
-            throw new globalThis.Error("The parameter 'fundId' must be defined.");
-        url_ = url_.replace("{fundId}", encodeURIComponent("" + fundId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processFund(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processFund(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<RepoTradeDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<RepoTradeDto[]>;
-        }));
-    }
-
-    protected processFund(response: HttpResponseBase): Observable<RepoTradeDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(RepoTradeDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    active5(asOfDate: Date): Observable<RepoTradeDto[]> {
-        let url_ = this.baseUrl + "/api/RepoTrades/active/{asOfDate}";
-        if (asOfDate === undefined || asOfDate === null)
-            throw new globalThis.Error("The parameter 'asOfDate' must be defined.");
-        url_ = url_.replace("{asOfDate}", encodeURIComponent(asOfDate ? "" + asOfDate.toISOString() : "null"));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processActive5(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processActive5(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<RepoTradeDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<RepoTradeDto[]>;
-        }));
-    }
-
-    protected processActive5(response: HttpResponseBase): Observable<RepoTradeDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(RepoTradeDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    settlement(settlementDate: Date): Observable<RepoTradeDto[]> {
-        let url_ = this.baseUrl + "/api/RepoTrades/settlement/{settlementDate}";
-        if (settlementDate === undefined || settlementDate === null)
-            throw new globalThis.Error("The parameter 'settlementDate' must be defined.");
-        url_ = url_.replace("{settlementDate}", encodeURIComponent(settlementDate ? "" + settlementDate.toISOString() : "null"));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processSettlement(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processSettlement(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<RepoTradeDto[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<RepoTradeDto[]>;
-        }));
-    }
-
-    protected processSettlement(response: HttpResponseBase): Observable<RepoTradeDto[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(RepoTradeDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    settle(id: number): Observable<RepoTradeDto> {
-        let url_ = this.baseUrl + "/api/RepoTrades/{id}/settle";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processSettle(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processSettle(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<RepoTradeDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<RepoTradeDto>;
-        }));
-    }
-
-    protected processSettle(response: HttpResponseBase): Observable<RepoTradeDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = RepoTradeDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    mature(id: number): Observable<RepoTradeDto> {
-        let url_ = this.baseUrl + "/api/RepoTrades/{id}/mature";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processMature(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processMature(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<RepoTradeDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<RepoTradeDto>;
-        }));
-    }
-
-    protected processMature(response: HttpResponseBase): Observable<RepoTradeDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = RepoTradeDto.fromJS(resultData200);
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    cancel(id: number): Observable<RepoTradeDto> {
-        let url_ = this.baseUrl + "/api/RepoTrades/{id}/cancel";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processCancel(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processCancel(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<RepoTradeDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<RepoTradeDto>;
-        }));
-    }
-
-    protected processCancel(response: HttpResponseBase): Observable<RepoTradeDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = RepoTradeDto.fromJS(resultData200);
             return _observableOf(result200);
             }));
         } else if (status !== 200 && status !== 204) {
@@ -3762,8 +1408,8 @@ export class RepoTradesClient implements IRepoTradesClient {
      * @param body (optional) 
      * @return OK
      */
-    validate(body: CreateRepoTradeDto | undefined): Observable<boolean> {
-        let url_ = this.baseUrl + "/api/RepoTrades/validate";
+    submit(body: number[] | undefined): Observable<RepoTradeDto[]> {
+        let url_ = this.baseUrl + "/api/RepoTrades/submit";
         url_ = url_.replace(/[?&]$/, "");
 
         const content_ = JSON.stringify(body);
@@ -3779,20 +1425,20 @@ export class RepoTradesClient implements IRepoTradesClient {
         };
 
         return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processValidate(response_);
+            return this.processSubmit(response_);
         })).pipe(_observableCatch((response_: any) => {
             if (response_ instanceof HttpResponseBase) {
                 try {
-                    return this.processValidate(response_ as any);
+                    return this.processSubmit(response_ as any);
                 } catch (e) {
-                    return _observableThrow(e) as any as Observable<boolean>;
+                    return _observableThrow(e) as any as Observable<RepoTradeDto[]>;
                 }
             } else
-                return _observableThrow(response_) as any as Observable<boolean>;
+                return _observableThrow(response_) as any as Observable<RepoTradeDto[]>;
         }));
     }
 
-    protected processValidate(response: HttpResponseBase): Observable<boolean> {
+    protected processSubmit(response: HttpResponseBase): Observable<RepoTradeDto[]> {
         const status = response.status;
         const responseBlob =
             response instanceof HttpResponse ? response.body :
@@ -3803,74 +1449,14 @@ export class RepoTradesClient implements IRepoTradesClient {
             return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-                result200 = resultData200 !== undefined ? resultData200 : null as any;
-    
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
-
-    /**
-     * @param counterpartyId (optional) 
-     * @param tradeDate (optional) 
-     * @param proposedNotional (optional) 
-     * @return OK
-     */
-    validateTargetCircle(counterpartyId: number | undefined, tradeDate: Date | undefined, proposedNotional: number | undefined): Observable<TargetCircleValidationDto> {
-        let url_ = this.baseUrl + "/api/RepoTrades/validate-target-circle?";
-        if (counterpartyId === null)
-            throw new globalThis.Error("The parameter 'counterpartyId' cannot be null.");
-        else if (counterpartyId !== undefined)
-            url_ += "counterpartyId=" + encodeURIComponent("" + counterpartyId) + "&";
-        if (tradeDate === null)
-            throw new globalThis.Error("The parameter 'tradeDate' cannot be null.");
-        else if (tradeDate !== undefined)
-            url_ += "tradeDate=" + encodeURIComponent(tradeDate ? "" + tradeDate.toISOString() : "") + "&";
-        if (proposedNotional === null)
-            throw new globalThis.Error("The parameter 'proposedNotional' cannot be null.");
-        else if (proposedNotional !== undefined)
-            url_ += "proposedNotional=" + encodeURIComponent("" + proposedNotional) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processValidateTargetCircle(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processValidateTargetCircle(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<TargetCircleValidationDto>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<TargetCircleValidationDto>;
-        }));
-    }
-
-    protected processValidateTargetCircle(response: HttpResponseBase): Observable<TargetCircleValidationDto> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = TargetCircleValidationDto.fromJS(resultData200);
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(RepoTradeDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
             return _observableOf(result200);
             }));
         } else if (status !== 200 && status !== 204) {
@@ -4319,88 +1905,60 @@ export class SecuritiesClient implements ISecuritiesClient {
     }
 }
 
-export interface IWeatherForecastClient {
-    /**
-     * @return OK
-     */
-    getWeatherForecast(): Observable<WeatherForecast[]>;
+export class AccountCashflowsDto implements IAccountCashflowsDto {
+    cashAccountId?: number;
+    accountName?: string | undefined;
+    currencyCode?: string | undefined;
+    cashflows?: CashflowDto[] | undefined;
+
+    constructor(data?: IAccountCashflowsDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.cashAccountId = _data["cashAccountId"];
+            this.accountName = _data["accountName"];
+            this.currencyCode = _data["currencyCode"];
+            if (Array.isArray(_data["cashflows"])) {
+                this.cashflows = [] as any;
+                for (let item of _data["cashflows"])
+                    this.cashflows!.push(CashflowDto.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): AccountCashflowsDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new AccountCashflowsDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["cashAccountId"] = this.cashAccountId;
+        data["accountName"] = this.accountName;
+        data["currencyCode"] = this.currencyCode;
+        if (Array.isArray(this.cashflows)) {
+            data["cashflows"] = [];
+            for (let item of this.cashflows)
+                data["cashflows"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
 }
 
-@Injectable()
-export class WeatherForecastClient implements IWeatherForecastClient {
-    private http: HttpClient;
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(@Inject(HttpClient) http: HttpClient, @Optional() @Inject(API_BASE_URL) baseUrl?: string) {
-        this.http = http;
-        this.baseUrl = baseUrl ?? "";
-    }
-
-    /**
-     * @return OK
-     */
-    getWeatherForecast(): Observable<WeatherForecast[]> {
-        let url_ = this.baseUrl + "/WeatherForecast";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processGetWeatherForecast(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processGetWeatherForecast(response_ as any);
-                } catch (e) {
-                    return _observableThrow(e) as any as Observable<WeatherForecast[]>;
-                }
-            } else
-                return _observableThrow(response_) as any as Observable<WeatherForecast[]>;
-        }));
-    }
-
-    protected processGetWeatherForecast(response: HttpResponseBase): Observable<WeatherForecast[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (response as any).error instanceof Blob ? (response as any).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(WeatherForecast.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status === 401) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            let result401: any = null;
-            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result401 = ProblemDetails.fromJS(resultData401);
-            return throwException("Unauthorized", status, _responseText, _headers, result401);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf(null as any);
-    }
+export interface IAccountCashflowsDto {
+    cashAccountId?: number;
+    accountName?: string | undefined;
+    currencyCode?: string | undefined;
+    cashflows?: CashflowDto[] | undefined;
 }
 
 export class AuthenticationRequest implements IAuthenticationRequest {
@@ -4735,138 +2293,18 @@ export interface ICounterpartyDto {
     modifiedBy?: string | undefined;
 }
 
-export class CounterpartyExposureDto implements ICounterpartyExposureDto {
-    counterpartyId?: number;
-    counterpartyName?: string | undefined;
-    tradeDate?: Date;
-    currentExposure?: number;
-    targetCircle?: number;
-    availableLimit?: number;
-    utilizationPercentage?: number;
-    isLimitBreached?: boolean;
-
-    constructor(data?: ICounterpartyExposureDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.counterpartyId = _data["counterpartyId"];
-            this.counterpartyName = _data["counterpartyName"];
-            this.tradeDate = _data["tradeDate"] ? new Date(_data["tradeDate"].toString()) : undefined as any;
-            this.currentExposure = _data["currentExposure"];
-            this.targetCircle = _data["targetCircle"];
-            this.availableLimit = _data["availableLimit"];
-            this.utilizationPercentage = _data["utilizationPercentage"];
-            this.isLimitBreached = _data["isLimitBreached"];
-        }
-    }
-
-    static fromJS(data: any): CounterpartyExposureDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new CounterpartyExposureDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["counterpartyId"] = this.counterpartyId;
-        data["counterpartyName"] = this.counterpartyName;
-        data["tradeDate"] = this.tradeDate ? this.tradeDate.toISOString() : undefined as any;
-        data["currentExposure"] = this.currentExposure;
-        data["targetCircle"] = this.targetCircle;
-        data["availableLimit"] = this.availableLimit;
-        data["utilizationPercentage"] = this.utilizationPercentage;
-        data["isLimitBreached"] = this.isLimitBreached;
-        return data;
-    }
-}
-
-export interface ICounterpartyExposureDto {
-    counterpartyId?: number;
-    counterpartyName?: string | undefined;
-    tradeDate?: Date;
-    currentExposure?: number;
-    targetCircle?: number;
-    availableLimit?: number;
-    utilizationPercentage?: number;
-    isLimitBreached?: boolean;
-}
-
-export class CreateCounterpartyDto implements ICreateCounterpartyDto {
-    name?: string | undefined;
-    shortName?: string | undefined;
-    country?: string | undefined;
-    creditRating?: string | undefined;
-    sector?: string | undefined;
-    isActive?: boolean;
-    createdByUserId?: number;
-
-    constructor(data?: ICreateCounterpartyDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.name = _data["name"];
-            this.shortName = _data["shortName"];
-            this.country = _data["country"];
-            this.creditRating = _data["creditRating"];
-            this.sector = _data["sector"];
-            this.isActive = _data["isActive"];
-            this.createdByUserId = _data["createdByUserId"];
-        }
-    }
-
-    static fromJS(data: any): CreateCounterpartyDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new CreateCounterpartyDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["name"] = this.name;
-        data["shortName"] = this.shortName;
-        data["country"] = this.country;
-        data["creditRating"] = this.creditRating;
-        data["sector"] = this.sector;
-        data["isActive"] = this.isActive;
-        data["createdByUserId"] = this.createdByUserId;
-        return data;
-    }
-}
-
-export interface ICreateCounterpartyDto {
-    name?: string | undefined;
-    shortName?: string | undefined;
-    country?: string | undefined;
-    creditRating?: string | undefined;
-    sector?: string | undefined;
-    isActive?: boolean;
-    createdByUserId?: number;
-}
-
-export class CreateFundDto implements ICreateFundDto {
-    fundCode?: string | undefined;
-    fundName?: string | undefined;
+export class CreateCashflowDto implements ICreateCashflowDto {
+    cashAccountId?: number;
+    fundId?: number;
+    repoTradeId?: number | undefined;
+    amount?: number;
     currencyCode?: string | undefined;
-    isActive?: boolean;
+    cashflowDate?: Date;
+    description?: string | undefined;
+    source?: string | undefined;
     createdByUserId?: number;
 
-    constructor(data?: ICreateFundDto) {
+    constructor(data?: ICreateCashflowDto) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -4877,37 +2315,49 @@ export class CreateFundDto implements ICreateFundDto {
 
     init(_data?: any) {
         if (_data) {
-            this.fundCode = _data["fundCode"];
-            this.fundName = _data["fundName"];
+            this.cashAccountId = _data["cashAccountId"];
+            this.fundId = _data["fundId"];
+            this.repoTradeId = _data["repoTradeId"];
+            this.amount = _data["amount"];
             this.currencyCode = _data["currencyCode"];
-            this.isActive = _data["isActive"];
+            this.cashflowDate = _data["cashflowDate"] ? new Date(_data["cashflowDate"].toString()) : undefined as any;
+            this.description = _data["description"];
+            this.source = _data["source"];
             this.createdByUserId = _data["createdByUserId"];
         }
     }
 
-    static fromJS(data: any): CreateFundDto {
+    static fromJS(data: any): CreateCashflowDto {
         data = typeof data === 'object' ? data : {};
-        let result = new CreateFundDto();
+        let result = new CreateCashflowDto();
         result.init(data);
         return result;
     }
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["fundCode"] = this.fundCode;
-        data["fundName"] = this.fundName;
+        data["cashAccountId"] = this.cashAccountId;
+        data["fundId"] = this.fundId;
+        data["repoTradeId"] = this.repoTradeId;
+        data["amount"] = this.amount;
         data["currencyCode"] = this.currencyCode;
-        data["isActive"] = this.isActive;
+        data["cashflowDate"] = this.cashflowDate ? this.cashflowDate.toISOString() : undefined as any;
+        data["description"] = this.description;
+        data["source"] = this.source;
         data["createdByUserId"] = this.createdByUserId;
         return data;
     }
 }
 
-export interface ICreateFundDto {
-    fundCode?: string | undefined;
-    fundName?: string | undefined;
+export interface ICreateCashflowDto {
+    cashAccountId?: number;
+    fundId?: number;
+    repoTradeId?: number | undefined;
+    amount?: number;
     currencyCode?: string | undefined;
-    isActive?: boolean;
+    cashflowDate?: Date;
+    description?: string | undefined;
+    source?: string | undefined;
     createdByUserId?: number;
 }
 
@@ -4975,86 +2425,6 @@ export interface ICreateRepoRateDto {
     createdByUserId?: number;
 }
 
-export class CreateRepoTradeDto implements ICreateRepoTradeDto {
-    fundId?: number;
-    counterpartyId?: number;
-    securityId?: number;
-    collateralTypeId?: number;
-    direction?: string | undefined;
-    notional?: number;
-    rate?: number;
-    startDate?: Date;
-    endDate?: Date;
-    settlementDate?: Date;
-    currency?: string | undefined;
-    createdByUserId?: number;
-
-    constructor(data?: ICreateRepoTradeDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.fundId = _data["fundId"];
-            this.counterpartyId = _data["counterpartyId"];
-            this.securityId = _data["securityId"];
-            this.collateralTypeId = _data["collateralTypeId"];
-            this.direction = _data["direction"];
-            this.notional = _data["notional"];
-            this.rate = _data["rate"];
-            this.startDate = _data["startDate"] ? new Date(_data["startDate"].toString()) : undefined as any;
-            this.endDate = _data["endDate"] ? new Date(_data["endDate"].toString()) : undefined as any;
-            this.settlementDate = _data["settlementDate"] ? new Date(_data["settlementDate"].toString()) : undefined as any;
-            this.currency = _data["currency"];
-            this.createdByUserId = _data["createdByUserId"];
-        }
-    }
-
-    static fromJS(data: any): CreateRepoTradeDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new CreateRepoTradeDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["fundId"] = this.fundId;
-        data["counterpartyId"] = this.counterpartyId;
-        data["securityId"] = this.securityId;
-        data["collateralTypeId"] = this.collateralTypeId;
-        data["direction"] = this.direction;
-        data["notional"] = this.notional;
-        data["rate"] = this.rate;
-        data["startDate"] = this.startDate ? this.startDate.toISOString() : undefined as any;
-        data["endDate"] = this.endDate ? this.endDate.toISOString() : undefined as any;
-        data["settlementDate"] = this.settlementDate ? this.settlementDate.toISOString() : undefined as any;
-        data["currency"] = this.currency;
-        data["createdByUserId"] = this.createdByUserId;
-        return data;
-    }
-}
-
-export interface ICreateRepoTradeDto {
-    fundId?: number;
-    counterpartyId?: number;
-    securityId?: number;
-    collateralTypeId?: number;
-    direction?: string | undefined;
-    notional?: number;
-    rate?: number;
-    startDate?: Date;
-    endDate?: Date;
-    settlementDate?: Date;
-    currency?: string | undefined;
-    createdByUserId?: number;
-}
-
 export class CreateSecurityDto implements ICreateSecurityDto {
     isin?: string | undefined;
     description?: string | undefined;
@@ -5119,15 +2489,13 @@ export interface ICreateSecurityDto {
     createdByUserId?: number;
 }
 
-export class EagleCashBalanceDto implements IEagleCashBalanceDto {
+export class FundAccountCashflowsDto implements IFundAccountCashflowsDto {
+    fundId?: number;
     fundCode?: string | undefined;
     fundName?: string | undefined;
-    openingBalance?: number;
-    currency?: string | undefined;
-    balanceDate?: Date;
-    source?: string | undefined;
+    accounts?: AccountCashflowsDto[] | undefined;
 
-    constructor(data?: IEagleCashBalanceDto) {
+    constructor(data?: IFundAccountCashflowsDto) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -5138,257 +2506,43 @@ export class EagleCashBalanceDto implements IEagleCashBalanceDto {
 
     init(_data?: any) {
         if (_data) {
+            this.fundId = _data["fundId"];
             this.fundCode = _data["fundCode"];
             this.fundName = _data["fundName"];
-            this.openingBalance = _data["openingBalance"];
-            this.currency = _data["currency"];
-            this.balanceDate = _data["balanceDate"] ? new Date(_data["balanceDate"].toString()) : undefined as any;
-            this.source = _data["source"];
+            if (Array.isArray(_data["accounts"])) {
+                this.accounts = [] as any;
+                for (let item of _data["accounts"])
+                    this.accounts!.push(AccountCashflowsDto.fromJS(item));
+            }
         }
     }
 
-    static fromJS(data: any): EagleCashBalanceDto {
+    static fromJS(data: any): FundAccountCashflowsDto {
         data = typeof data === 'object' ? data : {};
-        let result = new EagleCashBalanceDto();
+        let result = new FundAccountCashflowsDto();
         result.init(data);
         return result;
     }
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
+        data["fundId"] = this.fundId;
         data["fundCode"] = this.fundCode;
         data["fundName"] = this.fundName;
-        data["openingBalance"] = this.openingBalance;
-        data["currency"] = this.currency;
-        data["balanceDate"] = this.balanceDate ? this.balanceDate.toISOString() : undefined as any;
-        data["source"] = this.source;
+        if (Array.isArray(this.accounts)) {
+            data["accounts"] = [];
+            for (let item of this.accounts)
+                data["accounts"].push(item ? item.toJSON() : undefined as any);
+        }
         return data;
     }
 }
 
-export interface IEagleCashBalanceDto {
+export interface IFundAccountCashflowsDto {
+    fundId?: number;
     fundCode?: string | undefined;
     fundName?: string | undefined;
-    openingBalance?: number;
-    currency?: string | undefined;
-    balanceDate?: Date;
-    source?: string | undefined;
-}
-
-export class EagleExportRequestDto implements IEagleExportRequestDto {
-    exportDate?: Date;
-    exportedByUserId?: number;
-
-    constructor(data?: IEagleExportRequestDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.exportDate = _data["exportDate"] ? new Date(_data["exportDate"].toString()) : undefined as any;
-            this.exportedByUserId = _data["exportedByUserId"];
-        }
-    }
-
-    static fromJS(data: any): EagleExportRequestDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new EagleExportRequestDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["exportDate"] = this.exportDate ? this.exportDate.toISOString() : undefined as any;
-        data["exportedByUserId"] = this.exportedByUserId;
-        return data;
-    }
-}
-
-export interface IEagleExportRequestDto {
-    exportDate?: Date;
-    exportedByUserId?: number;
-}
-
-export class EagleExportResponseDto implements IEagleExportResponseDto {
-    success?: boolean;
-    message?: string | undefined;
-    fundBalances?: FundBalanceExportDto[] | undefined;
-    exportDate?: Date;
-    exportFilePath?: string | undefined;
-
-    constructor(data?: IEagleExportResponseDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.success = _data["success"];
-            this.message = _data["message"];
-            if (Array.isArray(_data["fundBalances"])) {
-                this.fundBalances = [] as any;
-                for (let item of _data["fundBalances"])
-                    this.fundBalances!.push(FundBalanceExportDto.fromJS(item));
-            }
-            this.exportDate = _data["exportDate"] ? new Date(_data["exportDate"].toString()) : undefined as any;
-            this.exportFilePath = _data["exportFilePath"];
-        }
-    }
-
-    static fromJS(data: any): EagleExportResponseDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new EagleExportResponseDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["success"] = this.success;
-        data["message"] = this.message;
-        if (Array.isArray(this.fundBalances)) {
-            data["fundBalances"] = [];
-            for (let item of this.fundBalances)
-                data["fundBalances"].push(item ? item.toJSON() : undefined as any);
-        }
-        data["exportDate"] = this.exportDate ? this.exportDate.toISOString() : undefined as any;
-        data["exportFilePath"] = this.exportFilePath;
-        return data;
-    }
-}
-
-export interface IEagleExportResponseDto {
-    success?: boolean;
-    message?: string | undefined;
-    fundBalances?: FundBalanceExportDto[] | undefined;
-    exportDate?: Date;
-    exportFilePath?: string | undefined;
-}
-
-export class EagleImportRequestDto implements IEagleImportRequestDto {
-    balanceDate?: Date;
-    cashBalances?: EagleCashBalanceDto[] | undefined;
-    importedByUserId?: number;
-
-    constructor(data?: IEagleImportRequestDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.balanceDate = _data["balanceDate"] ? new Date(_data["balanceDate"].toString()) : undefined as any;
-            if (Array.isArray(_data["cashBalances"])) {
-                this.cashBalances = [] as any;
-                for (let item of _data["cashBalances"])
-                    this.cashBalances!.push(EagleCashBalanceDto.fromJS(item));
-            }
-            this.importedByUserId = _data["importedByUserId"];
-        }
-    }
-
-    static fromJS(data: any): EagleImportRequestDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new EagleImportRequestDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["balanceDate"] = this.balanceDate ? this.balanceDate.toISOString() : undefined as any;
-        if (Array.isArray(this.cashBalances)) {
-            data["cashBalances"] = [];
-            for (let item of this.cashBalances)
-                data["cashBalances"].push(item ? item.toJSON() : undefined as any);
-        }
-        data["importedByUserId"] = this.importedByUserId;
-        return data;
-    }
-}
-
-export interface IEagleImportRequestDto {
-    balanceDate?: Date;
-    cashBalances?: EagleCashBalanceDto[] | undefined;
-    importedByUserId?: number;
-}
-
-export class EagleImportResponseDto implements IEagleImportResponseDto {
-    success?: boolean;
-    message?: string | undefined;
-    recordsProcessed?: number;
-    recordsImported?: number;
-    errors?: string[] | undefined;
-    importDate?: Date;
-
-    constructor(data?: IEagleImportResponseDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.success = _data["success"];
-            this.message = _data["message"];
-            this.recordsProcessed = _data["recordsProcessed"];
-            this.recordsImported = _data["recordsImported"];
-            if (Array.isArray(_data["errors"])) {
-                this.errors = [] as any;
-                for (let item of _data["errors"])
-                    this.errors!.push(item);
-            }
-            this.importDate = _data["importDate"] ? new Date(_data["importDate"].toString()) : undefined as any;
-        }
-    }
-
-    static fromJS(data: any): EagleImportResponseDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new EagleImportResponseDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["success"] = this.success;
-        data["message"] = this.message;
-        data["recordsProcessed"] = this.recordsProcessed;
-        data["recordsImported"] = this.recordsImported;
-        if (Array.isArray(this.errors)) {
-            data["errors"] = [];
-            for (let item of this.errors)
-                data["errors"].push(item);
-        }
-        data["importDate"] = this.importDate ? this.importDate.toISOString() : undefined as any;
-        return data;
-    }
-}
-
-export interface IEagleImportResponseDto {
-    success?: boolean;
-    message?: string | undefined;
-    recordsProcessed?: number;
-    recordsImported?: number;
-    errors?: string[] | undefined;
-    importDate?: Date;
+    accounts?: AccountCashflowsDto[] | undefined;
 }
 
 export class FundBalanceDto implements IFundBalanceDto {
@@ -5451,262 +2605,6 @@ export interface IFundBalanceDto {
     asOfDate?: Date;
 }
 
-export class FundBalanceExportDto implements IFundBalanceExportDto {
-    fundCode?: string | undefined;
-    fundName?: string | undefined;
-    closingBalance?: number;
-    currency?: string | undefined;
-    balanceDate?: Date;
-    isFlat?: boolean;
-
-    constructor(data?: IFundBalanceExportDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.fundCode = _data["fundCode"];
-            this.fundName = _data["fundName"];
-            this.closingBalance = _data["closingBalance"];
-            this.currency = _data["currency"];
-            this.balanceDate = _data["balanceDate"] ? new Date(_data["balanceDate"].toString()) : undefined as any;
-            this.isFlat = _data["isFlat"];
-        }
-    }
-
-    static fromJS(data: any): FundBalanceExportDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new FundBalanceExportDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["fundCode"] = this.fundCode;
-        data["fundName"] = this.fundName;
-        data["closingBalance"] = this.closingBalance;
-        data["currency"] = this.currency;
-        data["balanceDate"] = this.balanceDate ? this.balanceDate.toISOString() : undefined as any;
-        data["isFlat"] = this.isFlat;
-        return data;
-    }
-}
-
-export interface IFundBalanceExportDto {
-    fundCode?: string | undefined;
-    fundName?: string | undefined;
-    closingBalance?: number;
-    currency?: string | undefined;
-    balanceDate?: Date;
-    isFlat?: boolean;
-}
-
-export class FundCashflowSummaryDto implements IFundCashflowSummaryDto {
-    fundId?: number;
-    fundCode?: string | undefined;
-    fundName?: string | undefined;
-    currencyCode?: string | undefined;
-    totalInflows?: number;
-    totalOutflows?: number;
-    netCashflow?: number;
-    dateFrom?: Date;
-    dateTo?: Date;
-
-    constructor(data?: IFundCashflowSummaryDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.fundId = _data["fundId"];
-            this.fundCode = _data["fundCode"];
-            this.fundName = _data["fundName"];
-            this.currencyCode = _data["currencyCode"];
-            this.totalInflows = _data["totalInflows"];
-            this.totalOutflows = _data["totalOutflows"];
-            this.netCashflow = _data["netCashflow"];
-            this.dateFrom = _data["dateFrom"] ? new Date(_data["dateFrom"].toString()) : undefined as any;
-            this.dateTo = _data["dateTo"] ? new Date(_data["dateTo"].toString()) : undefined as any;
-        }
-    }
-
-    static fromJS(data: any): FundCashflowSummaryDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new FundCashflowSummaryDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["fundId"] = this.fundId;
-        data["fundCode"] = this.fundCode;
-        data["fundName"] = this.fundName;
-        data["currencyCode"] = this.currencyCode;
-        data["totalInflows"] = this.totalInflows;
-        data["totalOutflows"] = this.totalOutflows;
-        data["netCashflow"] = this.netCashflow;
-        data["dateFrom"] = this.dateFrom ? this.dateFrom.toISOString() : undefined as any;
-        data["dateTo"] = this.dateTo ? this.dateTo.toISOString() : undefined as any;
-        return data;
-    }
-}
-
-export interface IFundCashflowSummaryDto {
-    fundId?: number;
-    fundCode?: string | undefined;
-    fundName?: string | undefined;
-    currencyCode?: string | undefined;
-    totalInflows?: number;
-    totalOutflows?: number;
-    netCashflow?: number;
-    dateFrom?: Date;
-    dateTo?: Date;
-}
-
-export class FundDto implements IFundDto {
-    id?: number;
-    fundCode?: string | undefined;
-    fundName?: string | undefined;
-    currencyCode?: string | undefined;
-    isActive?: boolean;
-    createdDate?: Date;
-    createdBy?: string | undefined;
-    modifiedDate?: Date | undefined;
-    modifiedBy?: string | undefined;
-
-    constructor(data?: IFundDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.id = _data["id"];
-            this.fundCode = _data["fundCode"];
-            this.fundName = _data["fundName"];
-            this.currencyCode = _data["currencyCode"];
-            this.isActive = _data["isActive"];
-            this.createdDate = _data["createdDate"] ? new Date(_data["createdDate"].toString()) : undefined as any;
-            this.createdBy = _data["createdBy"];
-            this.modifiedDate = _data["modifiedDate"] ? new Date(_data["modifiedDate"].toString()) : undefined as any;
-            this.modifiedBy = _data["modifiedBy"];
-        }
-    }
-
-    static fromJS(data: any): FundDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new FundDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["id"] = this.id;
-        data["fundCode"] = this.fundCode;
-        data["fundName"] = this.fundName;
-        data["currencyCode"] = this.currencyCode;
-        data["isActive"] = this.isActive;
-        data["createdDate"] = this.createdDate ? this.createdDate.toISOString() : undefined as any;
-        data["createdBy"] = this.createdBy;
-        data["modifiedDate"] = this.modifiedDate ? this.modifiedDate.toISOString() : undefined as any;
-        data["modifiedBy"] = this.modifiedBy;
-        return data;
-    }
-}
-
-export interface IFundDto {
-    id?: number;
-    fundCode?: string | undefined;
-    fundName?: string | undefined;
-    currencyCode?: string | undefined;
-    isActive?: boolean;
-    createdDate?: Date;
-    createdBy?: string | undefined;
-    modifiedDate?: Date | undefined;
-    modifiedBy?: string | undefined;
-}
-
-export class FundFlatnessCheckDto implements IFundFlatnessCheckDto {
-    fundId?: number;
-    fundCode?: string | undefined;
-    fundName?: string | undefined;
-    currentBalance?: number;
-    currency?: string | undefined;
-    isFlat?: boolean;
-    requiredAdjustment?: number;
-    adjustmentType?: string | undefined;
-
-    constructor(data?: IFundFlatnessCheckDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.fundId = _data["fundId"];
-            this.fundCode = _data["fundCode"];
-            this.fundName = _data["fundName"];
-            this.currentBalance = _data["currentBalance"];
-            this.currency = _data["currency"];
-            this.isFlat = _data["isFlat"];
-            this.requiredAdjustment = _data["requiredAdjustment"];
-            this.adjustmentType = _data["adjustmentType"];
-        }
-    }
-
-    static fromJS(data: any): FundFlatnessCheckDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new FundFlatnessCheckDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["fundId"] = this.fundId;
-        data["fundCode"] = this.fundCode;
-        data["fundName"] = this.fundName;
-        data["currentBalance"] = this.currentBalance;
-        data["currency"] = this.currency;
-        data["isFlat"] = this.isFlat;
-        data["requiredAdjustment"] = this.requiredAdjustment;
-        data["adjustmentType"] = this.adjustmentType;
-        return data;
-    }
-}
-
-export interface IFundFlatnessCheckDto {
-    fundId?: number;
-    fundCode?: string | undefined;
-    fundName?: string | undefined;
-    currentBalance?: number;
-    currency?: string | undefined;
-    isFlat?: boolean;
-    requiredAdjustment?: number;
-    adjustmentType?: string | undefined;
-}
-
 export class PositionChangeDto implements IPositionChangeDto {
     collateralTypeId?: number;
     counterpartyId?: number;
@@ -5715,6 +2613,7 @@ export class PositionChangeDto implements IPositionChangeDto {
     fundId?: number;
     newNotionalAmount?: number;
     status?: string | undefined;
+    errorMessage?: string | undefined;
 
     constructor(data?: IPositionChangeDto) {
         if (data) {
@@ -5734,6 +2633,7 @@ export class PositionChangeDto implements IPositionChangeDto {
             this.fundId = _data["fundId"];
             this.newNotionalAmount = _data["newNotionalAmount"];
             this.status = _data["status"];
+            this.errorMessage = _data["errorMessage"];
         }
     }
 
@@ -5753,6 +2653,7 @@ export class PositionChangeDto implements IPositionChangeDto {
         data["fundId"] = this.fundId;
         data["newNotionalAmount"] = this.newNotionalAmount;
         data["status"] = this.status;
+        data["errorMessage"] = this.errorMessage;
         return data;
     }
 }
@@ -5765,6 +2666,7 @@ export interface IPositionChangeDto {
     fundId?: number;
     newNotionalAmount?: number;
     status?: string | undefined;
+    errorMessage?: string | undefined;
 }
 
 export class PositionDto implements IPositionDto {
@@ -5773,11 +2675,13 @@ export class PositionDto implements IPositionDto {
     counterpartyId?: number;
     counterpartyName?: string | undefined;
     securityId?: number;
+    variance?: number;
     securityName?: string | undefined;
     securityMaturityDate?: Date;
     fundNotionals?: { [key: string]: number; } | undefined;
     exposurePercentages?: { [key: string]: number; } | undefined;
     statuses?: { [key: string]: string; } | undefined;
+    commitStatus?: { [key: string]: string; } | undefined;
 
     constructor(data?: IPositionDto) {
         if (data) {
@@ -5795,6 +2699,7 @@ export class PositionDto implements IPositionDto {
             this.counterpartyId = _data["counterpartyId"];
             this.counterpartyName = _data["counterpartyName"];
             this.securityId = _data["securityId"];
+            this.variance = _data["variance"];
             this.securityName = _data["securityName"];
             this.securityMaturityDate = _data["securityMaturityDate"] ? new Date(_data["securityMaturityDate"].toString()) : undefined as any;
             if (_data["fundNotionals"]) {
@@ -5818,6 +2723,13 @@ export class PositionDto implements IPositionDto {
                         (this.statuses as any)![key] = _data["statuses"][key];
                 }
             }
+            if (_data["commitStatus"]) {
+                this.commitStatus = {} as any;
+                for (let key in _data["commitStatus"]) {
+                    if (_data["commitStatus"].hasOwnProperty(key))
+                        (this.commitStatus as any)![key] = _data["commitStatus"][key];
+                }
+            }
         }
     }
 
@@ -5835,6 +2747,7 @@ export class PositionDto implements IPositionDto {
         data["counterpartyId"] = this.counterpartyId;
         data["counterpartyName"] = this.counterpartyName;
         data["securityId"] = this.securityId;
+        data["variance"] = this.variance;
         data["securityName"] = this.securityName;
         data["securityMaturityDate"] = this.securityMaturityDate ? this.securityMaturityDate.toISOString() : undefined as any;
         if (this.fundNotionals) {
@@ -5858,6 +2771,13 @@ export class PositionDto implements IPositionDto {
                     (data["statuses"] as any)[key] = (this.statuses as any)[key];
             }
         }
+        if (this.commitStatus) {
+            data["commitStatus"] = {};
+            for (let key in this.commitStatus) {
+                if (this.commitStatus.hasOwnProperty(key))
+                    (data["commitStatus"] as any)[key] = (this.commitStatus as any)[key];
+            }
+        }
         return data;
     }
 }
@@ -5868,17 +2788,21 @@ export interface IPositionDto {
     counterpartyId?: number;
     counterpartyName?: string | undefined;
     securityId?: number;
+    variance?: number;
     securityName?: string | undefined;
     securityMaturityDate?: Date;
     fundNotionals?: { [key: string]: number; } | undefined;
     exposurePercentages?: { [key: string]: number; } | undefined;
     statuses?: { [key: string]: string; } | undefined;
+    commitStatus?: { [key: string]: string; } | undefined;
 }
 
 export class PositionLockDto implements IPositionLockDto {
     counterpartyId?: number;
     collateralTypeId?: number;
     fundId?: number;
+    locked?: boolean;
+    userDisplay?: string | undefined;
 
     constructor(data?: IPositionLockDto) {
         if (data) {
@@ -5894,6 +2818,8 @@ export class PositionLockDto implements IPositionLockDto {
             this.counterpartyId = _data["counterpartyId"];
             this.collateralTypeId = _data["collateralTypeId"];
             this.fundId = _data["fundId"];
+            this.locked = _data["locked"];
+            this.userDisplay = _data["userDisplay"];
         }
     }
 
@@ -5909,6 +2835,8 @@ export class PositionLockDto implements IPositionLockDto {
         data["counterpartyId"] = this.counterpartyId;
         data["collateralTypeId"] = this.collateralTypeId;
         data["fundId"] = this.fundId;
+        data["locked"] = this.locked;
+        data["userDisplay"] = this.userDisplay;
         return data;
     }
 }
@@ -5917,6 +2845,8 @@ export interface IPositionLockDto {
     counterpartyId?: number;
     collateralTypeId?: number;
     fundId?: number;
+    locked?: boolean;
+    userDisplay?: string | undefined;
 }
 
 export class PreviousDayRepoRateDto implements IPreviousDayRepoRateDto {
@@ -6351,186 +3281,6 @@ export interface ISecurityDto {
     modifiedDate?: Date | undefined;
 }
 
-export class TargetCircleValidationDto implements ITargetCircleValidationDto {
-    counterpartyId?: number;
-    counterpartyName?: string | undefined;
-    tradeDate?: Date;
-    currentExposure?: number;
-    proposedNotional?: number;
-    targetCircle?: number;
-    newTotalExposure?: number;
-    isWithinLimit?: boolean;
-    limitUtilizationPercentage?: number;
-    validationMessage?: string | undefined;
-
-    constructor(data?: ITargetCircleValidationDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.counterpartyId = _data["counterpartyId"];
-            this.counterpartyName = _data["counterpartyName"];
-            this.tradeDate = _data["tradeDate"] ? new Date(_data["tradeDate"].toString()) : undefined as any;
-            this.currentExposure = _data["currentExposure"];
-            this.proposedNotional = _data["proposedNotional"];
-            this.targetCircle = _data["targetCircle"];
-            this.newTotalExposure = _data["newTotalExposure"];
-            this.isWithinLimit = _data["isWithinLimit"];
-            this.limitUtilizationPercentage = _data["limitUtilizationPercentage"];
-            this.validationMessage = _data["validationMessage"];
-        }
-    }
-
-    static fromJS(data: any): TargetCircleValidationDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new TargetCircleValidationDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["counterpartyId"] = this.counterpartyId;
-        data["counterpartyName"] = this.counterpartyName;
-        data["tradeDate"] = this.tradeDate ? this.tradeDate.toISOString() : undefined as any;
-        data["currentExposure"] = this.currentExposure;
-        data["proposedNotional"] = this.proposedNotional;
-        data["targetCircle"] = this.targetCircle;
-        data["newTotalExposure"] = this.newTotalExposure;
-        data["isWithinLimit"] = this.isWithinLimit;
-        data["limitUtilizationPercentage"] = this.limitUtilizationPercentage;
-        data["validationMessage"] = this.validationMessage;
-        return data;
-    }
-}
-
-export interface ITargetCircleValidationDto {
-    counterpartyId?: number;
-    counterpartyName?: string | undefined;
-    tradeDate?: Date;
-    currentExposure?: number;
-    proposedNotional?: number;
-    targetCircle?: number;
-    newTotalExposure?: number;
-    isWithinLimit?: boolean;
-    limitUtilizationPercentage?: number;
-    validationMessage?: string | undefined;
-}
-
-export class UpdateCounterpartyDto implements IUpdateCounterpartyDto {
-    id?: number;
-    shortName?: string | undefined;
-    country?: string | undefined;
-    creditRating?: string | undefined;
-    sector?: string | undefined;
-    isActive?: boolean;
-    modifiedByUserId?: number;
-
-    constructor(data?: IUpdateCounterpartyDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.id = _data["id"];
-            this.shortName = _data["shortName"];
-            this.country = _data["country"];
-            this.creditRating = _data["creditRating"];
-            this.sector = _data["sector"];
-            this.isActive = _data["isActive"];
-            this.modifiedByUserId = _data["modifiedByUserId"];
-        }
-    }
-
-    static fromJS(data: any): UpdateCounterpartyDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new UpdateCounterpartyDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["id"] = this.id;
-        data["shortName"] = this.shortName;
-        data["country"] = this.country;
-        data["creditRating"] = this.creditRating;
-        data["sector"] = this.sector;
-        data["isActive"] = this.isActive;
-        data["modifiedByUserId"] = this.modifiedByUserId;
-        return data;
-    }
-}
-
-export interface IUpdateCounterpartyDto {
-    id?: number;
-    shortName?: string | undefined;
-    country?: string | undefined;
-    creditRating?: string | undefined;
-    sector?: string | undefined;
-    isActive?: boolean;
-    modifiedByUserId?: number;
-}
-
-export class UpdateFundDto implements IUpdateFundDto {
-    id?: number;
-    fundName?: string | undefined;
-    isActive?: boolean;
-    modifiedByUserId?: number;
-
-    constructor(data?: IUpdateFundDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.id = _data["id"];
-            this.fundName = _data["fundName"];
-            this.isActive = _data["isActive"];
-            this.modifiedByUserId = _data["modifiedByUserId"];
-        }
-    }
-
-    static fromJS(data: any): UpdateFundDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new UpdateFundDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["id"] = this.id;
-        data["fundName"] = this.fundName;
-        data["isActive"] = this.isActive;
-        data["modifiedByUserId"] = this.modifiedByUserId;
-        return data;
-    }
-}
-
-export interface IUpdateFundDto {
-    id?: number;
-    fundName?: string | undefined;
-    isActive?: boolean;
-    modifiedByUserId?: number;
-}
-
 export class UpdateRepoRateDto implements IUpdateRepoRateDto {
     id?: number;
     counterpartyId?: number;
@@ -6592,70 +3342,6 @@ export interface IUpdateRepoRateDto {
     targetCircle?: number;
     finalCircle?: number | undefined;
     active?: boolean | undefined;
-    modifiedByUserId?: number;
-}
-
-export class UpdateRepoTradeDto implements IUpdateRepoTradeDto {
-    id?: number;
-    notional?: number;
-    rate?: number;
-    startDate?: Date;
-    endDate?: Date;
-    settlementDate?: Date;
-    haircut?: number | undefined;
-    modifiedByUserId?: number;
-
-    constructor(data?: IUpdateRepoTradeDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.id = _data["id"];
-            this.notional = _data["notional"];
-            this.rate = _data["rate"];
-            this.startDate = _data["startDate"] ? new Date(_data["startDate"].toString()) : undefined as any;
-            this.endDate = _data["endDate"] ? new Date(_data["endDate"].toString()) : undefined as any;
-            this.settlementDate = _data["settlementDate"] ? new Date(_data["settlementDate"].toString()) : undefined as any;
-            this.haircut = _data["haircut"];
-            this.modifiedByUserId = _data["modifiedByUserId"];
-        }
-    }
-
-    static fromJS(data: any): UpdateRepoTradeDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new UpdateRepoTradeDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["id"] = this.id;
-        data["notional"] = this.notional;
-        data["rate"] = this.rate;
-        data["startDate"] = this.startDate ? this.startDate.toISOString() : undefined as any;
-        data["endDate"] = this.endDate ? this.endDate.toISOString() : undefined as any;
-        data["settlementDate"] = this.settlementDate ? this.settlementDate.toISOString() : undefined as any;
-        data["haircut"] = this.haircut;
-        data["modifiedByUserId"] = this.modifiedByUserId;
-        return data;
-    }
-}
-
-export interface IUpdateRepoTradeDto {
-    id?: number;
-    notional?: number;
-    rate?: number;
-    startDate?: Date;
-    endDate?: Date;
-    settlementDate?: Date;
-    haircut?: number | undefined;
     modifiedByUserId?: number;
 }
 
@@ -6721,60 +3407,6 @@ export interface IUpdateSecurityDto {
     maturityDate?: Date | undefined;
     isActive?: boolean;
     modifiedByUserId?: number;
-}
-
-export class WeatherForecast implements IWeatherForecast {
-    date?: Date;
-    temperatureC?: number;
-    readonly temperatureF?: number;
-    summary?: string | undefined;
-
-    constructor(data?: IWeatherForecast) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.date = _data["date"] ? new Date(_data["date"].toString()) : undefined as any;
-            this.temperatureC = _data["temperatureC"];
-            (this as any).temperatureF = _data["temperatureF"];
-            this.summary = _data["summary"];
-        }
-    }
-
-    static fromJS(data: any): WeatherForecast {
-        data = typeof data === 'object' ? data : {};
-        let result = new WeatherForecast();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["date"] = this.date ? formatDate(this.date) : undefined as any;
-        data["temperatureC"] = this.temperatureC;
-        data["temperatureF"] = this.temperatureF;
-        data["summary"] = this.summary;
-        return data;
-    }
-}
-
-export interface IWeatherForecast {
-    date?: Date;
-    temperatureC?: number;
-    temperatureF?: number;
-    summary?: string | undefined;
-}
-
-function formatDate(d: Date) {
-    return d.getFullYear() + '-' + 
-        (d.getMonth() < 9 ? ('0' + (d.getMonth()+1)) : (d.getMonth()+1)) + '-' +
-        (d.getDate() < 10 ? ('0' + d.getDate()) : d.getDate());
 }
 
 export class ApiException extends Error {

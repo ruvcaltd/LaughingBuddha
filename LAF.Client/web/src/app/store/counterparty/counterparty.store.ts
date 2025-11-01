@@ -1,16 +1,15 @@
-import { CounterpartiesClient } from './../../api/client';
-import { inject, Injectable, signal } from '@angular/core';
-import { CounterpartyDto } from '../../api/client';
+import { inject } from '@angular/core';
+import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { firstValueFrom } from 'rxjs';
+import { CounterpartiesClient, CounterpartyDto } from '../../api/client';
 
-@Injectable({ providedIn: 'root' })
-export class CounterpartyStore {
-    private client = inject(CounterpartiesClient)
-  private readonly _counterparties = signal<CounterpartyDto[]>([]);
-  readonly counterparties = this._counterparties.asReadonly();
-
-  async loadAll() {
-    const data = await firstValueFrom(this.client.counterpartiesAll());
-    this._counterparties.set(data);
-  }
-}
+export const CounterpartyStore = signalStore(
+  { providedIn: 'root' },
+  withState({ counterparties: [] as CounterpartyDto[] }),
+  withMethods((store, client = inject(CounterpartiesClient)) => ({
+    async loadAll() {
+      const data = await firstValueFrom(client.counterparties());
+      patchState(store, { counterparties: data });
+    },
+  })),
+);

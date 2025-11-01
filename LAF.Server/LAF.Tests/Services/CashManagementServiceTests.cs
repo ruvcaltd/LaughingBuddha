@@ -312,7 +312,7 @@ namespace LAF.Tests.Services
                 .ReturnsAsync(expectedCashflow);
 
             // Act
-            var result = await _cashManagementService.CreateCashflowAsync(createDto);
+            var result = await _cashManagementService.CreateCashflowAsync(createDto, false);
 
             // Assert
             Assert.IsNotNull(result);
@@ -347,7 +347,7 @@ namespace LAF.Tests.Services
 
             // Act & Assert
             var ex = Assert.ThrowsAsync<KeyNotFoundException>(
-                async () => await _cashManagementService.CreateCashflowAsync(createDto));
+                async () => await _cashManagementService.CreateCashflowAsync(createDto, false));
 
             StringAssert.Contains("Cash account with ID 999 not found", ex.Message);
         }
@@ -391,7 +391,7 @@ namespace LAF.Tests.Services
 
             // Act & Assert
             var ex = Assert.ThrowsAsync<InvalidOperationException>(
-                async () => await _cashManagementService.CreateCashflowAsync(createDto));
+                async () => await _cashManagementService.CreateCashflowAsync(createDto, false));
 
             StringAssert.Contains("Cashflow currency EUR does not match fund currency USD", ex.Message);
         }

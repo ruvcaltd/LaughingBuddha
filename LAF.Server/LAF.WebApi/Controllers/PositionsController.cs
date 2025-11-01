@@ -24,14 +24,14 @@ namespace LAF.WebApi.Controllers
         private readonly IRepoTradeService _repoTradeService;
         private readonly IRepoRateRepository _repoRateRepository;
         private readonly ISecurityService _securityService;
-        private readonly IHubContext<LafHub> hub;
+        private readonly ISignalRBroker hub;
         private readonly ILogger<PositionsController> _logger;
 
         public PositionsController(
             IRepoTradeService repoTradeService,
             IRepoRateRepository repoRateRepository,
             ISecurityService securityService,
-            IHubContext<LafHub> _hub,
+            ISignalRBroker _hub,
             ILogger<PositionsController> logger)
         {
             this._repoTradeService = repoTradeService;
@@ -138,8 +138,9 @@ namespace LAF.WebApi.Controllers
                         && p.CollateralTypeId == positionChange.CollateralTypeId);
 
                     //broadcast position change event here if needed
-                    await hub.Clients.All.SendAsync("PositionChanged", position);
-                    await hub.Clients.All.SendAsync("NewTrade", trade);
+                    if (position != null)
+                        await hub.SendToAll(SignalRBrokerMessages.PositionChanged, new SignalRBrokerMessages<PositionDto>(userId, position));
+                    await hub.SendToAll(SignalRBrokerMessages.NewTrade, new SignalRBrokerMessages<RepoTradeDto>(userId, trade));
 
                     positionChange.Status = "Success";
                 }
@@ -249,10 +250,14 @@ namespace LAF.WebApi.Controllers
         {
             try
             {
-                var email = User.FindFirst(ClaimTypes.Email)?.Value ?? "Unknown";
-                lockInfo.UserDisplay = email;
-                var connectionId = HttpContext.Connection.Id;
-                await hub.Clients.AllExcept(connectionId).SendAsync("PositionCellEditing", lockInfo);
+                var username = User.FindFirst("UserName")?.Value ?? "Unknown";
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(userIdClaim, out int userId))
+                {
+                    return Unauthorized(new { error = "Invalid user authentication" });
+                }
+                lockInfo.UserDisplay = username;
+                await hub.SendToAll(SignalRBrokerMessages.PositionCellEditing, new SignalRBrokerMessages<PositionLockDto>(userId, lockInfo));
                 return Ok();
             }
             catch (Exception ex)

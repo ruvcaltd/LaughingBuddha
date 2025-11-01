@@ -28,27 +28,6 @@ namespace LAF.WebApi.Controllers
             _logger = logger;
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<RepoRateDto>> GetRepoRateById(long id)
-        {
-            try
-            {
-                var repoRate = await _repoRateRepository.GetByIdAsync((int)id);
-                if (repoRate == null)
-                {
-                    return NotFound(new { error = $"Repo rate with ID {id} not found" });
-                }
-
-                var repoRateDto = RepoRateMapper.ToDto(repoRate);
-                return Ok(repoRateDto);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving repo rate with ID {RepoRateId}", id);
-                return StatusCode(500, new { error = "An error occurred while retrieving the repo rate" });
-            }
-        }
-
         [HttpGet("date/{repoDate:datetime}")]
         public async Task<ActionResult<IEnumerable<RepoRateDto>>> GetRepoRatesByDate(DateTime repoDate)
         {
@@ -65,29 +44,13 @@ namespace LAF.WebApi.Controllers
             }
         }
 
-        [HttpGet("counterparty/{counterpartyId}")]
-        public async Task<ActionResult<IEnumerable<RepoRateDto>>> GetRepoRatesByCounterparty(int counterpartyId)
-        {
-            try
-            {
-                var repoRates = await _repoRateRepository.GetRepoRatesByCounterpartyAsync(counterpartyId);
-                var repoRateDtos = RepoRateMapper.ToDtoList(repoRates);
-                return Ok(repoRateDtos);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving repo rates for counterparty {CounterpartyId}", counterpartyId);
-                return StatusCode(500, new { error = "An error occurred while retrieving repo rates for the counterparty" });
-            }
-        }
-
         [HttpGet("previous-day")]
         public async Task<ActionResult<IEnumerable<PreviousDayRepoRateDto>>> GetPreviousDayRepoRate(
             [FromQuery] DateTime currentDate)
         {
             try
             {
-                var previousDate = currentDate.Date.AddDays(-1);
+                var previousDate = currentDate.Date.AddDays(-1); //TODO: business date
 
                 var previousDayRate = await _repoRateRepository.GetRepoRatesByDateAsync(previousDate, true);
 
@@ -109,6 +72,50 @@ namespace LAF.WebApi.Controllers
             {
                 _logger.LogError(ex, "Error retrieving previous day repo rate for counterparty current date {CurrentDate}", currentDate);
                 return StatusCode(500, new { error = "An error occurred while retrieving the previous day repo rate" });
+            }
+        }
+
+        [HttpPost("new-day")]
+        public async Task<ActionResult> NewDay([FromBody] DateTime currentDate)
+        {
+            try
+            {
+                var previousDate = currentDate.Date.AddDays(-1); // TODO: business day
+                var previousDayRate = await _repoRateRepository.GetRepoRatesByDateAsync(previousDate.Date, true);
+                var newDayData = previousDayRate.Select(x => new CreateRepoRateDto
+                {
+                    CounterpartyId = x.CounterpartyId,
+                    CollateralTypeId = x.CollateralTypeId,
+                    RepoDate = currentDate.Date,
+                    RepoRate = x.RepoRate1,
+                    TargetCircle = x.TargetCircle,
+                    FinalCircle = 0,
+                    Active = x.Active
+                });
+
+                foreach (var newDay in newDayData)
+                    try
+                    {
+                        await this.CreateRepoRate(newDay);
+                    }
+                    catch
+                    {
+                        _logger.LogWarning("Skipping duplicate repo rate for counterparty {CounterpartyId}, collateral type {CollateralTypeId} on date {RepoDate}",
+                            newDay.CounterpartyId, newDay.CollateralTypeId, newDay.RepoDate);
+                        continue;
+                    }
+
+                return Ok();
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Invalid operation while creating repo rate");
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating repo rate");
+                return StatusCode(500, new { error = "An error occurred while creating the repo rate" });
             }
         }
 
@@ -148,7 +155,7 @@ namespace LAF.WebApi.Controllers
                 repoRate = await _repoRateRepository.AddAsync(repoRate);
 
                 var repoRateDto = RepoRateMapper.ToDto(repoRate);
-                return CreatedAtAction(nameof(GetRepoRateById), new { id = repoRate.Id }, repoRateDto);
+                return CreatedAtAction(nameof(GetRepoRatesByDate), new { repoDate = repoRate.EffectiveDate }, repoRateDto);
             }
             catch (InvalidOperationException ex)
             {
@@ -163,7 +170,7 @@ namespace LAF.WebApi.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<RepoRateDto>> UpdateRepoRate(long id, [FromBody] UpdateRepoRateDto updateDto)
+        public async Task<ActionResult<bool>> UpdateRepoRate(long id, [FromBody] UpdateRepoRateDto updateDto)
         {
             try
             {
@@ -184,7 +191,6 @@ namespace LAF.WebApi.Controllers
                     return Unauthorized(new { error = "Invalid user authentication" });
                 }
 
-
                 updateDto.ModifiedByUserId = userId;
 
                 var existingRepoRate = await _repoRateRepository.GetByIdAsync((int)id);
@@ -192,12 +198,12 @@ namespace LAF.WebApi.Controllers
                 {
                     return NotFound(new { error = $"Repo rate with ID {id} not found" });
                 }
+                var changed = existingRepoRate.TargetCircle != updateDto.TargetCircle || existingRepoRate.RepoRate1 != updateDto.RepoRate;
 
                 RepoRateMapper.UpdateEntity(existingRepoRate, updateDto);
                 await _repoRateRepository.UpdateAsync(existingRepoRate);
 
-                var repoRateDto = RepoRateMapper.ToDto(existingRepoRate);
-                return Ok(repoRateDto);
+                return Ok(changed);
             }
             catch (KeyNotFoundException ex)
             {
@@ -288,72 +294,6 @@ namespace LAF.WebApi.Controllers
             {
                 _logger.LogError(ex, "Error setting repo rate {RepoRateId} as active", id);
                 return StatusCode(500, new { error = "An error occurred while setting the repo rate as active" });
-            }
-        }
-
-        [HttpGet("active/{asOfDate:datetime}")]
-        public async Task<ActionResult<IEnumerable<RepoRateDto>>> GetActiveRepoRates(DateTime asOfDate)
-        {
-            try
-            {
-                var repoRates = await _repoRateRepository.FindAsync(rr =>
-                    rr.EffectiveDate == asOfDate.Date && rr.Active);
-
-                var repoRateDtos = RepoRateMapper.ToDtoList(repoRates);
-                return Ok(repoRateDtos);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving active repo rates as of {AsOfDate}", asOfDate);
-                return StatusCode(500, new { error = "An error occurred while retrieving active repo rates" });
-            }
-        }
-
-        [HttpGet("search")]
-        public async Task<ActionResult<IEnumerable<RepoRateDto>>> SearchRepoRates(
-            [FromQuery] int? counterpartyId = null,
-            [FromQuery] int? collateralTypeId = null,
-            [FromQuery] DateTime? fromDate = null,
-            [FromQuery] DateTime? toDate = null,
-            [FromQuery] bool? activeOnly = null)
-        {
-            try
-            {
-                var query = await _repoRateRepository.FindAsync(rr => true); // Start with all records
-
-                if (counterpartyId.HasValue)
-                {
-                    query = query.Where(rr => rr.CounterpartyId == counterpartyId.Value);
-                }
-
-                if (collateralTypeId.HasValue)
-                {
-                    query = query.Where(rr => rr.CollateralTypeId == collateralTypeId.Value);
-                }
-
-                if (fromDate.HasValue)
-                {
-                    query = query.Where(rr => rr.EffectiveDate >= fromDate.Value.Date);
-                }
-
-                if (toDate.HasValue)
-                {
-                    query = query.Where(rr => rr.EffectiveDate <= toDate.Value.Date);
-                }
-
-                if (activeOnly.HasValue && activeOnly.Value)
-                {
-                    query = query.Where(rr => rr.Active);
-                }
-
-                var repoRates = query.ToList();
-                var repoRateDtos = RepoRateMapper.ToDtoList(repoRates);
-                return Ok(repoRateDtos);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error searching repo rates with parameters");
-                return StatusCode(500, new { error = "An error occurred while searching repo rates" });
             }
         }
     }

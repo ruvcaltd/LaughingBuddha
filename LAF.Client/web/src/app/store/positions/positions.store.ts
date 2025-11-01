@@ -1,6 +1,6 @@
 import { signalStore, withState, withComputed, withMethods, patchState } from '@ngrx/signals';
 import { computed } from '@angular/core';
-import { IPositionLockDto, IRepoTradeDto } from '../../api/client';
+import { IPositionDto, IPositionLockDto, IRepoTradeDto } from '../../api/client';
 import { withDevtools } from '@angular-architects/ngrx-toolkit';
 
 
@@ -10,6 +10,7 @@ export interface ITradeBlotterGridItem {
   fundExposurePercents?: { [fundId: number]: number };
   fundStatuses?: { [fundId: string]: string };
   locked?: { [fundId: string]: boolean };
+  lockedBy?: { [fundId: string]: string };
   counterpartyId?: number;
   securityId?: number;
   securityName?: string | undefined;
@@ -46,7 +47,7 @@ export const PositionsStore = signalStore(
     currentDate: computed(() => selectedDate() || new Date())
   })),
   withMethods((state) => ({
-    setPositions(positions: IRepoTradeDto[]) {
+    setPositions(positions: IPositionDto[]) {
       patchState(state, { positions });
     },
     setLoading(loading: boolean) {
@@ -58,14 +59,18 @@ export const PositionsStore = signalStore(
     setSelectedDate(selectedDate: Date | null) {
       patchState(state, { selectedDate });
     },
-    addPosition(trade: IRepoTradeDto) {
+    addPosition(trade: IPositionDto) {
       patchState(state, { positions: [...state.positions(), trade] });
     },    
     lockPosition(lock: IPositionLockDto){
       const positions = state.positions().map(pos => {
         if (pos.collateralTypeId === lock.collateralTypeId && pos.counterpartyId === lock.counterpartyId) {
-          if(pos.locked) 
-            pos.locked[lock.fundId!] = true;
+          if(pos.locked) {
+            pos.locked[lock.fundId!] = lock.locked ?? false;
+            if(pos.lockedBy) {
+              pos.lockedBy[lock.fundId!] = lock.userDisplay ?? "";
+            }
+          }
         }
         return pos;
       });
@@ -76,6 +81,9 @@ export const PositionsStore = signalStore(
         if (pos.collateralTypeId === lock.collateralTypeId && pos.counterpartyId === lock.counterpartyId) {
           if(pos.locked) 
             pos.locked[lock.fundId!] = false;
+           if(pos.lockedBy) {
+              pos.lockedBy[lock.fundId!] = "";
+            }
         }
         return pos;
       });

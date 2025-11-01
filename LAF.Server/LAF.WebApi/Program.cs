@@ -35,13 +35,13 @@ public class Program
         builder.Services.AddScoped<ICashflowRepository, CashflowRepository>();
         builder.Services.AddScoped<ISecurityRepository, SecurityRepository>();
         builder.Services.AddScoped<IUserRepository, UserRepository>();
+        builder.Services.AddScoped<ISignalRBroker, SignalRBroker>();
 
         // Register services
         builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
         builder.Services.AddScoped<IRepoTradeService, RepoTradeService>();
         builder.Services.AddScoped<ITargetCircleService, TargetCircleService>();
         builder.Services.AddScoped<ICashManagementService, CashManagementService>();
-        builder.Services.AddScoped<IEagleIntegrationService, EagleIntegrationService>();
         builder.Services.AddScoped<ISecurityService, SecurityService>();
         // JWT Authentication
         builder.Services.AddAuthentication(options =>

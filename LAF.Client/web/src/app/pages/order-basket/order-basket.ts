@@ -1,28 +1,25 @@
-import { Component, OnInit, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  DxDataGridModule,
-  DxTemplateHost,
-  DxTemplateModule,
-} from 'devextreme-angular';
-import { Navbar } from '../../shared/navbar/navbar';
+import { Component, OnInit, computed, inject } from '@angular/core';
+import { DxDataGridModule, DxTemplateHost, DxTemplateModule } from 'devextreme-angular';
+import { firstValueFrom } from 'rxjs';
+import { RepoTradesClient } from '../../api/client';
 import { TradesStore } from '../../store/trades/trades.store';
-import { IRepoTradeDto } from '../../api/client';
 
 @Component({
   selector: 'app-order-basket',
-  imports: [CommonModule, DxDataGridModule, Navbar, DxTemplateModule],
+  imports: [CommonModule, DxDataGridModule, DxTemplateModule],
   providers: [DxTemplateHost],
   templateUrl: './order-basket.html',
 })
 export class OrderBasket implements OnInit {
   private tradesStore = inject(TradesStore);
+  private tradeApiClient = inject(RepoTradesClient);
 
   // Filter trades where status is 'Draft'
-  draftTrades = computed(() => 
-    this.tradesStore.trades().filter(trade => trade.status === 'Draft')
+  draftTrades = computed(() =>
+    this.tradesStore.trades().filter((trade) => trade.status === 'Draft'),
   );
-  
+
   loading = this.tradesStore.loading;
   error = this.tradesStore.error;
 
@@ -31,7 +28,7 @@ export class OrderBasket implements OnInit {
       mode: 'batch' as const,
       allowUpdating: true,
       allowAdding: false,
-      allowDeleting: true,
+      allowDeleting: false,
       useIcons: true,
     },
     paging: { enabled: true, pageSize: 50 },
@@ -47,16 +44,30 @@ export class OrderBasket implements OnInit {
   };
 
   async ngOnInit(): Promise<void> {
-    // Data is loaded from the trades store
+    this.tradesStore.loadTrades(new Date(), new Date(), 'Draft');
   }
 
   formatCurrency(value: number | undefined): string {
     if (value === undefined || value === null) return '$0';
-    return `$${(value / 1000000).toFixed(2)}M`;
+    return `$${value.toFixed(2)}M`;
   }
 
   formatPercent(value: number | undefined): string {
     if (value === undefined || value === null) return '0%';
     return `${value.toFixed(4)}%`;
+  }
+
+  async submitTrades(): Promise<void> {
+    const tradeIds = this.draftTrades()
+      .map((trade) => trade.id)
+      .filter((id) => id !== undefined) as number[];
+    try {
+      await firstValueFrom(this.tradeApiClient.submit(tradeIds));
+      // Refresh the trades after submission
+      this.tradesStore.loadTrades(new Date(), new Date(), 'Draft');
+    } catch (error) {
+      console.error('Error submitting trades:', error);
+      // Handle error appropriately, maybe show a toast or alert
+    }
   }
 }

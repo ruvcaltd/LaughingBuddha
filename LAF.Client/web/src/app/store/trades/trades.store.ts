@@ -1,7 +1,7 @@
-import { signalStore, withState, withComputed, withMethods, patchState } from '@ngrx/signals';
-import { computed } from '@angular/core';
-import { IRepoTradeDto } from '../../api/client';
 import { withDevtools } from '@angular-architects/ngrx-toolkit';
+import { computed, inject } from '@angular/core';
+import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
+import { IRepoTradeDto, RepoTradesClient } from '../../api/client';
 
 export interface TradesState {
   trades: IRepoTradeDto[];
@@ -14,7 +14,7 @@ const initialState: TradesState = {
   trades: [],
   loading: false,
   error: null,
-  selectedDate: null
+  selectedDate: null,
 };
 
 export const TradesStore = signalStore(
@@ -25,9 +25,27 @@ export const TradesStore = signalStore(
     tradeCount: computed(() => trades().length),
     hasTrades: computed(() => trades().length > 0),
     isLoading: computed(() => loading()),
-    currentDate: computed(() => selectedDate() || new Date())
+    currentDate: computed(() => selectedDate() || new Date()),
   })),
-  withMethods((state) => ({
+  withMethods((state, http = inject(RepoTradesClient)) => ({
+    loadTrades(fromDate: Date | null, toDate: Date | null, status: string | null) {
+      patchState(state, { loading: true });
+      http
+        .search(
+          undefined,
+          undefined,
+          undefined,
+          fromDate ?? undefined,
+          toDate ?? undefined,
+          undefined,
+          status ?? undefined,
+          undefined,
+        )
+        .subscribe({
+          next: (trades) => patchState(state, { trades, loading: false }),
+          error: (error) => patchState(state, { error: error.message, loading: false }),
+        });
+    },
     setTrades(trades: IRepoTradeDto[]) {
       patchState(state, { trades });
     },
@@ -44,14 +62,14 @@ export const TradesStore = signalStore(
       patchState(state, { trades: [...state.trades(), trade] });
     },
     updateTrade(updatedTrade: IRepoTradeDto) {
-      const trades = state.trades().map(trade => 
-        trade.id === updatedTrade.id ? updatedTrade : trade
-      );
+      const trades = state
+        .trades()
+        .map((trade) => (trade.id === updatedTrade.id ? updatedTrade : trade));
       patchState(state, { trades });
     },
     removeTrade(tradeId: number) {
-      const trades = state.trades().filter(trade => trade.id !== tradeId);
+      const trades = state.trades().filter((trade) => trade.id !== tradeId);
       patchState(state, { trades });
-    }
-  }))
+    },
+  })),
 );

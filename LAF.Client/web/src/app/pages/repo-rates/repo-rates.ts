@@ -1,29 +1,28 @@
-import { Component, OnInit, inject, ChangeDetectorRef, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ChangeDetectorRef, Component, Input, OnInit, computed, inject } from '@angular/core';
 import {
   DxDataGridModule,
   DxDropDownBoxComponent,
   DxTemplateHost,
   DxTemplateModule,
 } from 'devextreme-angular';
-import {
-  RepoRateDto,
-  CreateRepoRateDto,
-  UpdateRepoRateDto,
-  CounterpartyDto,
-  CollateralTypeDto,
-  IRepoRateDto,
-  AuthClient,
-  RepoRatesClient,
-} from '../../api/client';
-import { RepoRatesStore } from '../../store/repo-rates/repo-rates.store';
-import { SharedStore } from '../../store/shared/shared.store';
-import { CounterpartyStore } from '../../store/counterparty/counterparty.store';
-import { CollateralTypeStore } from '../../store/collateral-type/collateral-type.store';
-import { Navbar } from '../../shared/navbar/navbar';
-import { ThemeService } from '../../services/theme.service';
 import { SelectionChangedEvent } from 'devextreme/ui/data_grid';
 import { firstValueFrom } from 'rxjs';
+import {
+  CreateRepoRateDto,
+  FundsClient,
+  IRepoRateDto,
+  RepoRateDto,
+  RepoRatesClient,
+  UpdateRepoRateDto,
+} from '../../api/client';
+import { ThemeService } from '../../services/theme.service';
+import { ToastService } from '../../services/toast.service';
+import { ToastComponent } from '../../shared/toast/toast.component';
+import { CollateralTypeStore } from '../../store/collateral-type/collateral-type.store';
+import { CounterpartyStore } from '../../store/counterparty/counterparty.store';
+import { RepoRatesStore } from '../../store/repo-rates/repo-rates.store';
+import { SharedStore } from '../../store/shared/shared.store';
 
 export interface IRepoRateGridItem extends IRepoRateDto {
   previousDayCircle?: number;
@@ -35,21 +34,25 @@ export interface IRepoRateGridItem extends IRepoRateDto {
   imports: [
     CommonModule,
     DxDataGridModule,
-    Navbar,
     DxDropDownBoxComponent,
     DxTemplateModule,
     DxTemplateModule,
+    ToastComponent,
   ],
   providers: [DxTemplateHost],
   templateUrl: './repo-rates.html',
 })
 export class RepoRates implements OnInit {
   private repoRateApiClient = inject(RepoRatesClient);
-
+  private fundsApiClient = inject(FundsClient);
   private repoRatesStore = inject(RepoRatesStore);
+
   private sharedStore = inject(SharedStore);
   private themeService = inject(ThemeService);
+  private toastService = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
+
+  @Input() embeddedView: boolean = false;
 
   public gridOptions = {
     editing: {
@@ -85,7 +88,7 @@ export class RepoRates implements OnInit {
   collateralTypes = this.collateralTypeStore.collateralTypes;
 
   gridTheme = computed(() =>
-    this.isDark ? 'dx.material.blue.compact.dark' : 'dx.material.blue.compact.light'
+    this.isDark ? 'dx.material.blue.compact.dark' : 'dx.material.blue.compact.light',
   );
   get isDark(): boolean {
     return this.themeService.isDark();
@@ -104,7 +107,7 @@ export class RepoRates implements OnInit {
   public getAverageTargetCircle(): string {
     if (this.rowData().length === 0) return '$0.0M';
     const sum = this.rowData().reduce((sum, r) => sum + (r.targetCircle || 0), 0);
-    const avg = sum / this.rowData().length / 1000000;
+    const avg = sum / this.rowData().length;
     return `$${avg.toFixed(1)}M`;
   }
 
@@ -117,7 +120,7 @@ export class RepoRates implements OnInit {
     } catch (error) {
       console.error('Error loading data:', error);
       this.repoRatesStore.setError(
-        'Failed to load repo rates. Please check your connection and try again.'
+        'Failed to load repo rates. Please check your connection and try again.',
       );
     } finally {
       this.repoRatesStore.setLoading(false);
@@ -130,11 +133,12 @@ export class RepoRates implements OnInit {
         this.repoRatesStore
           .rates()
           .filter(
-            (r) => r.repoDate?.toDateString() === (this.selectedDate() ?? new Date()).toDateString()
+            (r) =>
+              r.repoDate?.toDateString() === (this.selectedDate() ?? new Date()).toDateString(),
           ).length === 0
       ) {
         const repoRates = (await firstValueFrom(
-          this.repoRateApiClient.date(date)
+          this.repoRateApiClient.date(date),
         )) as IRepoRateGridItem[];
         const repoRatesPreviousDay = await firstValueFrom(this.repoRateApiClient.previousDay(date));
         for (const rate of repoRates) {
@@ -142,7 +146,7 @@ export class RepoRates implements OnInit {
           const prev = repoRatesPreviousDay.find(
             (r) =>
               r.collateralTypeId === rate.collateralTypeId &&
-              r.counterpartyId === rate.counterpartyId
+              r.counterpartyId === rate.counterpartyId,
           );
           rate.previousDayCircle = prev?.finalCircle;
         }
@@ -159,7 +163,10 @@ export class RepoRates implements OnInit {
     for (const change of changes) {
       await this.saveRow(change, false);
     }
+
     await this.loadRepoRatesForDate(this.selectedDate() ?? new Date());
+    this.cdr.detectChanges();
+    console.log('All changes have been saved.');
   }
 
   async toggleActive(row: any) {
@@ -186,7 +193,14 @@ export class RepoRates implements OnInit {
           active: data.active,
           modifiedByUserId: this.sharedStore.currentUser()?.id || 1,
         });
-        await firstValueFrom(this.repoRateApiClient.repoRatesPUT(data.id, updateDto));
+        const updated = await await firstValueFrom(
+          this.repoRateApiClient.repoRatesPUT(data.id, updateDto),
+        );
+        if (updated) {
+          this.toastService.showSuccess(
+            `Repo rate ${data.counterpartyName} (${data.collateralTypeName}) has been updated successfully.`,
+          );
+        }
       } else {
         // Create new rate
         const createDto = new CreateRepoRateDto({
@@ -200,10 +214,16 @@ export class RepoRates implements OnInit {
           repoDate: this.selectedDate() ?? new Date(),
         });
         await firstValueFrom(this.repoRateApiClient.repoRatesPOST(createDto));
+
+        this.toastService.showSuccess(
+          `Repo rate ${data.counterpartyName} (${data.collateralTypeName}) has been created successfully.`,
+        );
       }
       if (reloadAfter) await this.loadRepoRatesForDate(this.selectedDate() ?? new Date());
     } catch (error) {
-      console.error('Error saving repo rate:', error);
+      this.toastService.showError(
+        `Error saving repo rate ${data.counterpartyId} (${data.collateralTypeId}): ${error}`,
+      );
     }
   }
 
@@ -228,28 +248,17 @@ export class RepoRates implements OnInit {
 
     try {
       const selectedDate = this.selectedDate() ?? new Date();
-      let repoRates = (await firstValueFrom(
-        this.repoRateApiClient.date(selectedDate)
-      )) as IRepoRateGridItem[];
-      const repoRatesPreviousDay = await firstValueFrom(
-        this.repoRateApiClient.previousDay(selectedDate)
-      );
-      const newRates: IRepoRateGridItem[] = [];
-      for (const rate of repoRatesPreviousDay) {
-        const prev = repoRates.find(
-          (r) =>
-            r.collateralTypeId === rate.collateralTypeId && r.counterpartyId === rate.counterpartyId
-        );
-        if (prev) continue;
-        // clone rate to newRate
-        const newRate = { ...rate, id: undefined, repoDate: selectedDate };
-        newRates.push(newRate);
-      }
-      this.repoRatesStore.setRates(newRates);
-      await this.onSaved();
+
+      // flatten cash accounts after new day roll
+      await firstValueFrom(this.fundsApiClient.flatten(this.selectedDate() ?? new Date()));
+      await this.toastService.showInfo('Cash accounts have been flattened for start of day.');
+
+      // roll the new day on the backend
+      await firstValueFrom(this.repoRateApiClient.newDay(selectedDate));
       await this.loadRepoRatesForDate(selectedDate);
+      this.toastService.showSuccess('Repo rates for new day have been rolled successfully.');
     } catch (error) {
-      console.error('Error loading repo rates:', error);
+      this.toastService.showError('Failed to load repo rates for new day.');
     } finally {
       this.repoRatesStore.setLoading(false);
     }
@@ -272,4 +281,11 @@ export class RepoRates implements OnInit {
   getSelectedRowKeys<T>(value: T): T[] {
     return value !== null && value !== undefined ? [value] : [];
   }
+
+  formatToMillion = {
+    formatter: (value: number) => {
+      if (value === undefined || value === null) return '$0';
+      return `$${(value / 1000000).toFixed(2)}M`;
+    },
+  };
 }

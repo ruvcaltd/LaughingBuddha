@@ -1,15 +1,17 @@
-import { inject, Injectable, signal } from '@angular/core';
-import { CollateralTypeDto, CollateralTypesClient } from '../../api/client';
+import { inject } from '@angular/core';
+import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { firstValueFrom } from 'rxjs';
+import { CollateralTypeDto, CollateralTypesClient } from '../../api/client';
 
-@Injectable({ providedIn: 'root' })
-export class CollateralTypeStore {
-  private client = inject(CollateralTypesClient)
-  private readonly _collateralTypes = signal<CollateralTypeDto[]>([]);
-  readonly collateralTypes = this._collateralTypes.asReadonly();
-
-  async loadAll() {
-    const data = await firstValueFrom(this.client.collateralTypesAll());
-    this._collateralTypes.set(data);
-  }
-}
+export const CollateralTypeStore = signalStore(
+  { providedIn: 'root' },
+  withState({
+    collateralTypes: [] as CollateralTypeDto[],
+  }),
+  withMethods((store, client = inject(CollateralTypesClient)) => ({
+    async loadAll() {
+      const data = await firstValueFrom(client.collateralTypes());
+      patchState(store, { collateralTypes: data });
+    },
+  })),
+);

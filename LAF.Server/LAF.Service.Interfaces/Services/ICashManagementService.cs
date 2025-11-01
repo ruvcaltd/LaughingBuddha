@@ -21,5 +21,7 @@ namespace LAF.Service.Interfaces.Services
         Task<bool> ProcessTradeMaturityAsync(int tradeId, int processedByUserId);
         Task<bool> EnsureFundFlatnessAsync(int fundId, DateTime date, int processedByUserId);
         Task<IEnumerable<CashflowDto>> GetCashflowsByTradeAsync(int repoTradeId);
+        Task Flatten(DateTime asOfDate);
+        Task<string> DeleteCashflowAsync(int cashflowId);
     }
 }

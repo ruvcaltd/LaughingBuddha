@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -20,12 +21,9 @@ namespace LAF.WebApi.Hubs
         {
             var connectionId = Context.ConnectionId;
             _connectedClients.TryAdd(connectionId, connectionId);
-            
             _logger.LogInformation("Client connected: {ConnectionId}", connectionId);
-            
             // Send hello message to all other clients
             await Clients.Others.SendAsync("ClientJoined", $"Client {connectionId} has joined");
-            
             await base.OnConnectedAsync();
         }
 
@@ -45,7 +43,7 @@ namespace LAF.WebApi.Hubs
 
             // Notify others that a client has left
             await Clients.Others.SendAsync("ClientLeft", $"Client {connectionId} has left");
-            
+
             await base.OnDisconnectedAsync(exception);
         }
 
@@ -54,10 +52,5 @@ namespace LAF.WebApi.Hubs
             return _connectedClients.Count;
         }
 
-        public async Task BroadcastMessage(string eventName, object message)
-        {
-            _logger.LogInformation("Broadcasting message for event: {EventName}", eventName);
-            await Clients.All.SendAsync(eventName, message);
-        }
     }
 }

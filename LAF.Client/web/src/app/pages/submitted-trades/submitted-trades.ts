@@ -1,17 +1,11 @@
-import { Component, OnInit, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  DxDataGridModule,
-  DxTemplateHost,
-  DxTemplateModule,
-} from 'devextreme-angular';
-import { Navbar } from '../../shared/navbar/navbar';
+import { Component, OnInit, computed, inject } from '@angular/core';
+import { DxDataGridModule, DxTemplateHost, DxTemplateModule } from 'devextreme-angular';
 import { TradesStore } from '../../store/trades/trades.store';
-import { IRepoTradeDto } from '../../api/client';
 
 @Component({
   selector: 'app-submitted-trades',
-  imports: [CommonModule, DxDataGridModule, Navbar, DxTemplateModule],
+  imports: [CommonModule, DxDataGridModule, DxTemplateModule],
   providers: [DxTemplateHost],
   templateUrl: './submitted-trades.html',
 })
@@ -19,10 +13,10 @@ export class SubmittedTrades implements OnInit {
   private tradesStore = inject(TradesStore);
 
   // Filter trades where status is not 'Draft'
-  submittedTrades = computed(() => 
-    this.tradesStore.trades().filter(trade => trade.status !== 'Draft')
+  submittedTrades = computed(() =>
+    this.tradesStore.trades().filter((trade) => trade.status !== 'Draft'),
   );
-  
+
   loading = this.tradesStore.loading;
   error = this.tradesStore.error;
 
@@ -46,12 +40,12 @@ export class SubmittedTrades implements OnInit {
   };
 
   async ngOnInit(): Promise<void> {
-    // Data is loaded from the trades store
+    this.tradesStore.loadTrades(new Date(), new Date(), null);
   }
 
   formatCurrency(value: number | undefined): string {
     if (value === undefined || value === null) return '$0';
-    return `$${(value / 1000000).toFixed(2)}M`;
+    return `$${value.toFixed(2)}M`;
   }
 
   formatPercent(value: number | undefined): string {

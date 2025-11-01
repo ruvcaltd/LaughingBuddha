@@ -1,18 +1,29 @@
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-  <app-navbar></app-navbar>
   <div class="mx-auto px-4 sm:px-6 lg:px-8 py-4">
     <div class="card">
       <div class="card-header">
         <div class="flex items-center justify-between">
           <div class="flex items-center">
-            <svg class="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              class="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
             <h1 class="text-lg font-medium text-gray-900 dark:text-gray-100">Submitted Trades</h1>
           </div>
           <div class="flex items-center gap-2">
             <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Total:</span>
-            <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ submittedTrades().length }}</span>
+            <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{
+              submittedTrades().length
+            }}</span>
           </div>
         </div>
       </div>
@@ -41,12 +52,29 @@
           </div>
         </div>
 
-        <div *ngIf="!loading() && !error() && submittedTrades().length === 0" class="text-center py-8">
-          <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <div
+          *ngIf="!loading() && !error() && submittedTrades().length === 0"
+          class="text-center py-8"
+        >
+          <svg
+            class="mx-auto h-8 w-8 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No submitted trades</h3>
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">There are no submitted trades to display.</p>
+          <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+            No submitted trades
+          </h3>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            There are no submitted trades to display.
+          </p>
         </div>
 
         <div *ngIf="!loading() && !error() && submittedTrades().length > 0">
@@ -68,52 +96,60 @@
             <dxi-column dataField="tradeReference" caption="Trade Ref" width="120"></dxi-column>
             <dxi-column dataField="status" caption="Status" width="100"></dxi-column>
             <dxi-column dataField="fundCode" caption="Fund" width="100"></dxi-column>
-            <dxi-column dataField="counterpartyName" caption="Counterparty" width="150"></dxi-column>
-            <dxi-column dataField="collateralTypeName" caption="Collateral Type" width="150"></dxi-column>
+            <dxi-column
+              dataField="counterpartyName"
+              caption="Counterparty"
+              width="150"
+            ></dxi-column>
+            <dxi-column
+              dataField="collateralTypeName"
+              caption="Collateral Type"
+              width="150"
+            ></dxi-column>
             <dxi-column dataField="direction" caption="Direction" width="100"></dxi-column>
-            <dxi-column 
-              dataField="notional" 
-              caption="Notional" 
-              dataType="number" 
+            <dxi-column
+              dataField="notional"
+              caption="Notional"
+              dataType="number"
               format="$ #,##0.00,'M'"
               width="120"
             ></dxi-column>
-            <dxi-column 
-              dataField="rate" 
-              caption="Rate (%)" 
-              dataType="number" 
+            <dxi-column
+              dataField="rate"
+              caption="Rate (%)"
+              dataType="number"
               format="#.0####"
               width="100"
             ></dxi-column>
-            <dxi-column 
-              dataField="startDate" 
-              caption="Start Date" 
+            <!-- <dxi-column
+              dataField="startDate"
+              caption="Start Date"
               dataType="date"
               format="yyyy-MM-dd"
               width="120"
             ></dxi-column>
-            <dxi-column 
-              dataField="endDate" 
-              caption="End Date" 
+            <dxi-column
+              dataField="endDate"
+              caption="End Date"
               dataType="date"
               format="yyyy-MM-dd"
               width="120"
             ></dxi-column>
-            <dxi-column 
-              dataField="settlementDate" 
-              caption="Settlement Date" 
+            <dxi-column
+              dataField="settlementDate"
+              caption="Settlement Date"
               dataType="date"
               format="yyyy-MM-dd"
               width="140"
             ></dxi-column>
             <dxi-column dataField="currency" caption="Currency" width="90"></dxi-column>
-            <dxi-column 
-              dataField="createdDate" 
-              caption="Created Date" 
+            <dxi-column
+              dataField="createdDate"
+              caption="Created Date"
               dataType="datetime"
               format="yyyy-MM-dd HH:mm"
               width="150"
-            ></dxi-column>
+            ></dxi-column> -->
             <dxi-column dataField="createdBy" caption="Created By" width="120"></dxi-column>
 
             <dxo-load-panel [enabled]="loading()"></dxo-load-panel>

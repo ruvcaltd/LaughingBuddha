@@ -31,7 +31,7 @@ public class AuthenticationService : IAuthenticationService
             return null;
         }
 
-        var token = GenerateJwtToken(user.Email, user.Id);
+        var token = GenerateJwtToken(user.Email, user.Id, user.DisplayName);
 
         return new AuthenticationResponse
         {
@@ -42,7 +42,7 @@ public class AuthenticationService : IAuthenticationService
         };
     }
 
-    private string GenerateJwtToken(string email, int userId)
+    private string GenerateJwtToken(string email, int userId, string displayName)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_jwtKey);
@@ -52,7 +52,8 @@ public class AuthenticationService : IAuthenticationService
             Subject = new ClaimsIdentity(new[]
             {
                 new Claim(ClaimTypes.Email, email),
-                new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                new Claim("UserName", displayName)
             }),
             Expires = DateTime.UtcNow.AddDays(7),
             SigningCredentials = new SigningCredentials(

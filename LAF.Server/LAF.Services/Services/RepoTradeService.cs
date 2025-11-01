@@ -378,6 +378,46 @@ namespace LAF.Services.Services
             }
         }
 
+        public async Task<IEnumerable<RepoTradeDto>> SubmitTradesAsync(int[] tradeIds, int submittedByUserId)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var submittedTrades = new List<RepoTrade>();
+                foreach (var tradeId in tradeIds)
+                {
+                    var trade = await _repoTradeRepository.GetByIdAsync(tradeId);
+                    if (trade == null)
+                    {
+                        throw new KeyNotFoundException($"Trade with ID {tradeId} not found");
+                    }
+
+                    if (trade.Status != "Draft")
+                    {
+                        throw new InvalidOperationException($"Trade {tradeId} cannot be submitted from status: {trade.Status}");
+                    }
+
+                    trade.Status = "Submitted";
+                    trade.ModifiedBy = submittedByUserId;
+                    trade.ModifiedDate = DateTime.UtcNow;
+
+                    await _repoTradeRepository.UpdateAsync(trade);
+                    submittedTrades.Add(trade);
+                    
+                    _logger.LogInformation($"Trade submitted successfully: TRD{trade.Id:D6}");
+                }
+
+                await transaction.CommitAsync();
+                return RepoTradeMapper.ToDtoList(submittedTrades);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error submitting trades");
+                throw;
+            }
+        }
+
         private async Task CreateTradeSettlementCashflow(RepoTrade trade)
         {
             var cashflowAmount = trade.Direction == "Lend" ? -trade.Notional : trade.Notional;

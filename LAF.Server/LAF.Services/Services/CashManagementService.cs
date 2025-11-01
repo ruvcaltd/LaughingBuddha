@@ -57,7 +57,7 @@ namespace LAF.Services.Services
                     FundCode = account.Fund?.FundCode,
                     FundName = account.Fund?.FundName,
                     CurrencyCode = account.CurrencyCode,
-                    CurrentBalance = (account.Balance ?? 0) + netCashflow,
+                    CurrentBalance = netCashflow,
                     AsOfDate = asOfDate
                 };
             }
@@ -215,7 +215,6 @@ namespace LAF.Services.Services
                     try
                     {
                         var result = await CreateCashflowInternalAsync(createDto, transaction);
-                        await transaction.CommitAsync();
                         return result;
                     }
                     catch (Exception)
@@ -301,12 +300,12 @@ namespace LAF.Services.Services
 
                 if (fromDate.HasValue)
                 {
-                    cashflows = cashflows.Where(cf => cf.CashflowDate.DateTime >= fromDate.Value);
+                    cashflows = cashflows.Where(cf => cf.CashflowDate.DateTime.Date >= fromDate.Value.Date);
                 }
 
                 if (toDate.HasValue)
                 {
-                    cashflows = cashflows.Where(cf => cf.CashflowDate.DateTime <= toDate.Value);
+                    cashflows = cashflows.Where(cf => cf.CashflowDate.DateTime.Date <= toDate.Value.Date);
                 }
 
                 return ToCashflowDtoList(cashflows);
@@ -589,6 +588,90 @@ namespace LAF.Services.Services
         private List<CashflowDto> ToCashflowDtoList(IEnumerable<Cashflow> entities)
         {
             return entities?.Select(ToCashflowDto).ToList() ?? new List<CashflowDto>();
+        }
+
+        public async Task Flatten(DateTime asOfDate)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Get all active fund balances
+                var balances = await GetAllFundBalancesAsync(asOfDate);
+
+                foreach (var balance in balances)
+                {
+                    // Skip if fund is already flat (balance near zero)
+                    if (Math.Abs(balance.AvailableCash) < 0.01m)
+                    {
+                        continue;
+                    }
+
+                    // Get the fund's cash account
+                    var cashAccount = await _cashAccountRepository.GetByFundIdAsync(balance.FundId);
+                    if (cashAccount == null)
+                    {
+                        throw new KeyNotFoundException($"No cash account found for fund {balance.FundId}");
+                    }
+
+                    // Create flattening cashflow with opposite amount
+                    var flatteningCashflow = new CreateCashflowDto
+                    {
+                        CashAccountId = cashAccount.Id,
+                        FundId = balance.FundId,
+                        RepoTradeId = null,
+                        Amount = -balance.AvailableCash, // Opposite amount to flatten
+                        CurrencyCode = balance.CurrencyCode,
+                        CashflowDate = asOfDate,
+                        Description = $"End-of-day Adjustment For Fund {balance.FundCode}",
+                        Source = "EOD Adjustment",
+                        CreatedByUserId = 1
+                    };
+
+                    await CreateCashflowAsync(flatteningCashflow, false); // false because we're managing transaction manually
+                }
+
+                await transaction.CommitAsync();
+                _logger.LogInformation("Successfully flattened all fund balances");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error flattening fund balances");
+                throw;
+            }
+        }
+
+        public async Task<string> DeleteCashflowAsync(int cashflowId)
+        {
+            try
+            {
+                // Get the cashflow to verify it exists and check its properties
+                var cashflow = await _cashflowRepository.GetByIdAsync(cashflowId);
+                if (cashflow == null)
+                {
+                    return $"Error: Attempted to delete non-existent cashflow with ID {cashflowId}";
+                }
+
+                // If the cashflow is associated with a trade, verify the trade status
+                if (cashflow.TradeId.HasValue)
+                {
+                    var trade = await _repoTradeRepository.GetByIdAsync(cashflow.TradeId.Value);
+                    if (trade != null && trade.Status == "Settled")
+                    {
+                        return $"Cannot delete cashflow {cashflowId} - associated with settled trade {cashflow.TradeId.Value}";
+                    }
+                }
+
+                // Delete the cashflow
+                await _cashflowRepository.DeleteAsync(cashflowId);
+
+                return $"";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting cashflow {CashflowId}", cashflowId); ;
+                return $"Error deleting cashflow {cashflowId}";
+            }
         }
     }
 }

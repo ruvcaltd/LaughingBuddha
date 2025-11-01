@@ -1,0 +1,204 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <app-toast></app-toast>
+  <div class="mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <!-- Header Section -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <svg
+              class="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+              />
+            </svg>
+            <h1 class="text-lg font-medium text-gray-900 dark:text-gray-100">Cashflows</h1>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              class="btn btn-secondary"
+              (click)="reloadCurrentSelection()"
+              [disabled]="loading()"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Reload
+            </button>
+            <button class="btn btn-primary" (click)="openAddPopup()" [disabled]="loading()">
+              Add Cashflow
+            </button>
+          </div>
+        </div>
+        <div class="flex gap-4 mt-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Fund</label>
+            <select [(ngModel)]="selectedFund" (change)="onFundChange()" class="form-control">
+              <option value="">Select Fund</option>
+              <option *ngFor="let fund of funds()" [ngValue]="fund">{{ fund.fundName }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >Cash Account</label
+            >
+            <select
+              [(ngModel)]="selectedCashAccount"
+              (change)="onCashAccountChange($event)"
+              class="form-control"
+              [disabled]="!selectedFund()"
+            >
+              <option value="">Select Cash Account</option>
+              <option
+                *ngFor="let account of selectedFund()?.accounts ?? []"
+                [value]="account.cashAccountId"
+              >
+                {{ account.accountName }}
+              </option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >As of Date</label
+            >
+            <input
+              type="date"
+              [value]="selectedDate() | date: 'yyyy-MM-dd'"
+              (change)="$event.target.valueAsDate ? onDateChange($event.target.valueAsDate) : null"
+              class="form-control"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid Section -->
+    <div class="card">
+      <dx-data-grid
+        [dataSource]="cashflows()"
+        [height]="'calc(100vh - 400px)'"
+        [showBorders]="true"
+        [columnAutoWidth]="true"
+        [allowColumnReordering]="true"
+        [allowColumnResizing]="true"
+        [rowAlternationEnabled]="true"
+        [editing]="{ allowDeleting: true }"
+        (onRowRemoving)="onRowRemoving($event)"
+      >
+        <dxi-column dataField="id" caption="ID" dataType="number" width="80"></dxi-column>
+        <dxi-column
+          dataField="amount"
+          caption="Amount"
+          dataType="number"
+          format="#,##0.00"
+        ></dxi-column>
+        <dxi-column dataField="currencyCode" caption="Currency" width="100"></dxi-column>
+        <dxi-column
+          dataField="effectiveDate"
+          caption="Effective Date"
+          dataType="date"
+          format="yyyy-MM-dd"
+        ></dxi-column>
+        <dxi-column dataField="description" caption="Description"></dxi-column>
+        <dxi-column dataField="source" caption="Source"></dxi-column>
+        <dxi-column
+          dataField="createdDate"
+          caption="Created Date"
+          dataType="datetime"
+          format="yyyy-MM-dd HH:mm"
+        ></dxi-column>
+        <dxi-column dataField="createdBy" caption="Created By"></dxi-column>
+        <!-- Remove the custom Actions column -->
+        <!-- Add command column for delete button -->
+        <dxi-column type="buttons" width="100">
+          <dxi-button name="delete" [disabled]="loading()"></dxi-button>
+        </dxi-column>
+        <dxo-load-panel [enabled]="loading()"></dxo-load-panel>
+      </dx-data-grid>
+    </div>
+
+    <!-- Add Cashflow Modal -->
+    <div
+      *ngIf="showAddPopup()"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      (click)="closeAddPopup()"
+    >
+      <div
+        class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full mx-4"
+        (click)="$event.stopPropagation()"
+      >
+        <h2 class="text-lg font-medium mb-4">Add New Cashflow</h2>
+        <form>
+          <div class="mb-4">
+            <label class="block text-sm font-medium">Amount</label>
+            <input
+              type="number"
+              [(ngModel)]="newCashflow().amount"
+              name="amount"
+              class="form-control"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium">Currency Code</label>
+            <input
+              type="text"
+              [(ngModel)]="newCashflow().currencyCode"
+              name="currencyCode"
+              class="form-control"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium">Cashflow Date</label>
+            <input
+              type="date"
+              [value]="newCashflow().cashflowDate | date: 'yyyy-MM-dd'"
+              (change)="
+                $event.target.valueAsDate
+                  ? (newCashflow().cashflowDate = $event.target.valueAsDate)
+                  : null
+              "
+              name="cashflowDate"
+              class="form-control"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium">Description</label>
+            <input
+              type="text"
+              [(ngModel)]="newCashflow().description"
+              name="description"
+              class="form-control"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium">Source</label>
+            <input
+              type="text"
+              [(ngModel)]="newCashflow().source"
+              name="source"
+              class="form-control"
+            />
+          </div>
+          <div class="flex justify-end gap-2">
+            <button type="button" class="btn btn-secondary" (click)="closeAddPopup()">
+              Cancel
+            </button>
+            <button type="button" class="btn btn-primary" (click)="saveNewCashflow()">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

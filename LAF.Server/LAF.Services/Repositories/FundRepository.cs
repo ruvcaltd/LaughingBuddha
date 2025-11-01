@@ -22,18 +22,24 @@ namespace LAF.Services.Repositories
         public async Task<Fund> GetByIdAsync(int id)
         {
             return await _context.Funds
+                  .Include(f => f.CashAccounts)
+                .ThenInclude(c => c.Cashflows)
                 .FirstOrDefaultAsync(f => f.Id == id);
         }
 
         public async Task<Fund> GetByFundCodeAsync(string fundCode)
         {
             return await _context.Funds
+                  .Include(f => f.CashAccounts)
+                .ThenInclude(c => c.Cashflows)
                 .FirstOrDefaultAsync(f => f.FundCode == fundCode);
         }
 
         public async Task<IEnumerable<Fund>> GetAllAsync()
         {
             return await _context.Funds
+                  .Include(f => f.CashAccounts)
+                .ThenInclude(c => c.Cashflows)
                 .OrderBy(f => f.FundCode)
                 .ToListAsync();
         }
@@ -41,6 +47,8 @@ namespace LAF.Services.Repositories
         public async Task<IEnumerable<Fund>> FindAsync(Expression<Func<Fund, bool>> predicate)
         {
             return await _context.Funds
+                  .Include(f => f.CashAccounts)
+                .ThenInclude(c => c.Cashflows)
                 .Where(predicate)
                 .OrderBy(f => f.FundCode)
                 .ToListAsync();
@@ -73,6 +81,8 @@ namespace LAF.Services.Repositories
         {
             return await _context.Funds
                 .Where(f => f.IsActive)
+                .Include(f => f.CashAccounts)
+                .ThenInclude(c => c.Cashflows)
                 .OrderBy(f => f.FundCode)
                 .ToListAsync();
         }
@@ -84,7 +94,7 @@ namespace LAF.Services.Repositories
 
         public async Task<IEnumerable<Fund>> GetFundsByCurrencyAsync(string currencyCode)
         {
-            return await _context.Funds
+            return await _context.Funds.Include(f => f.CashAccounts).ThenInclude(c => c.Cashflows)
                 .Where(f => f.CurrencyCode == currencyCode)
                 .OrderBy(f => f.FundCode)
                 .ToListAsync();

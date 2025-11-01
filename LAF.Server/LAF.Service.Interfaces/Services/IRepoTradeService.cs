@@ -20,5 +20,6 @@ namespace LAF.Service.Interfaces.Services
         Task<RepoTradeDto> SettleTradeAsync(int tradeId, int settledByUserId);
         Task<RepoTradeDto> MatureTradeAsync(int tradeId, int maturedByUserId);
         Task<RepoTradeDto> CancelTradeAsync(int tradeId, int cancelledByUserId);
+        Task<IEnumerable<RepoTradeDto>> SubmitTradesAsync(int[] tradeIds, int submittedByUserId);
     }
 }

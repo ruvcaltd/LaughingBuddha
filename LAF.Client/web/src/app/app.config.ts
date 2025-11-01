@@ -1,22 +1,28 @@
-import { environment } from './../../environments';
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection, inject } from '@angular/core';
-import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  ApplicationConfig,
+  inject,
+  provideBrowserGlobalErrorListeners,
+  provideZonelessChangeDetection,
+} from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { environment } from './../../environments';
 
-import { routes } from './app.routes';
-import { ThemeService } from './services/theme.service';
 import {
   API_BASE_URL,
   AuthClient,
-  RepoRatesClient,
-  FundsClient,
-  RepoTradesClient,
-  CounterpartiesClient,
+  CashflowClient, // Added
   CollateralTypesClient,
-  PositionsClient
+  CounterpartiesClient,
+  FundsClient,
+  PositionsClient,
+  RepoRatesClient,
+  RepoTradesClient,
 } from './api/client';
+import { routes } from './app.routes';
 import { AuthService } from './services/auth.service';
 import { SignalRService } from './services/signalr.service';
+import { ThemeService } from './services/theme.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -32,12 +38,13 @@ export const appConfig: ApplicationConfig = {
           const headers = token ? req.headers.set('Authorization', `Bearer ${token}`) : req.headers;
           const cloned = req.clone({ headers, withCredentials: true });
           return next(cloned);
-        }
-      ])
+        },
+      ]),
     ),
     ThemeService,
     // NSwag API clients (marked @Injectable without providedIn) must be provided here
     AuthClient,
+    CashflowClient, // Added
     RepoRatesClient,
     PositionsClient,
     FundsClient,
@@ -47,7 +54,7 @@ export const appConfig: ApplicationConfig = {
     SignalRService,
     {
       provide: API_BASE_URL,
-      useFactory: () => environment.apiUrl
-    }
-  ]
+      useFactory: () => environment.apiUrl,
+    },
+  ],
 };

@@ -1,7 +1,7 @@
-import { computed } from '@angular/core';
+import { computed, inject } from '@angular/core';
 import { signalStore, withState, withComputed, withMethods, patchState } from '@ngrx/signals';
 import { withDevtools } from '@angular-architects/ngrx-toolkit';
-import { IFundBalanceDto } from '../../api/client';
+import { FundsClient, IFundBalanceDto } from '../../api/client';
 
 export interface FundBalancesState {
   balances: IFundBalanceDto[];
@@ -37,7 +37,7 @@ export const FundBalanceStore = signalStore(
       return map;
     })
   })),
-  withMethods((state) => ({
+  withMethods((state, http = inject(FundsClient)) => ({
     setBalances(balances: IFundBalanceDto[]) {
       patchState(state, { balances });
     },
@@ -79,6 +79,13 @@ export const FundBalanceStore = signalStore(
     },
     clear() {
       patchState(state, { balances: [], loading: false, error: null });
+    },
+    loadAll(date: Date){
+      patchState(state, { loading: true });
+      http.balances(date).subscribe({
+        next: (balances) => patchState(state, { balances, loading: false }),
+        error: (error) => patchState(state, { error: error.message, loading: false }),
+      });
     }
   }))
 );

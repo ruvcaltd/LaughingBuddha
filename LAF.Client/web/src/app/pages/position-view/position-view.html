@@ -1,213 +1,373 @@
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-  <app-navbar></app-navbar>
   <app-toast></app-toast>
-  <div class="mx-auto px-4 sm:px-6 lg:px-8 py-4">
-    <!-- Header Section -->
-    <div class="card mb-4">
-      <div class="card-header">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center">
-            <svg
-              class="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-            </svg>
-            <h1 class="text-lg font-medium text-gray-900 dark:text-gray-100">Positions</h1>
+  <div *ngIf="pageReloadPending()" class="mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div class="rounded-md bg-blue-50 dark:bg-blue-900/20 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">Position Updated</h3>
+          <div class="mt-2 text-sm text-blue-700 dark:text-blue-300">
+            <p>Position has been updated and the user should consider reloading the positions.</p>
+          </div>
+          <div class="mt-4">
+            <button class="btn btn-primary" (click)="loadData()">Reload Positions</button>
           </div>
         </div>
       </div>
+    </div>
+  </div>
+  <div class="mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div class="flex">
+      <div *ngIf="showRepoRates()" class="w-1/3 pr-4">
+        <app-repo-rates [embeddedView]="true"></app-repo-rates>
+      </div>
+      <div class="flex-1">
+        <!-- Header Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <svg
+                  class="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
+                <h1 class="text-lg font-medium text-gray-900 dark:text-gray-100">Positions</h1>
+              </div>
 
-      <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div class="px-4 py-6">
-          <!-- Fund Balances Table -->
-          <div class="mb-6">
-            <h2 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-3">Fund Balances</h2>
-            <div class="overflow-x-auto">
-              <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead class="bg-gray-50 dark:bg-gray-800">
-                  <tr>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fund</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Available Cash</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Currency</th>
-                  </tr>
-                </thead>
-                <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                  <tr *ngFor="let balance of fundBalances">
-                    <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{{ getFundName(balance.fundId!) }}</td>
-                    <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{{ balance.availableCash | currency }}</td>
-                    <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{{ balance.currencyCode }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div *ngIf="error()" class="p-6">
-            <div class="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
-              <div class="flex">
-                <div class="flex-shrink-0">
-                  <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <!-- Right side: Toggle Repo Rates and Order Basket links -->
+              <div class="flex items-center">
+                <button
+                  (click)="toggleRepoRates()"
+                  class="flex items-center mr-4 text-blue-500 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
-                      fill-rule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clip-rule="evenodd"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
                     />
                   </svg>
-                </div>
-                <div class="ml-3">
-                  <h3 class="text-sm font-medium text-red-800 dark:text-red-200">
-                    Error loading data
-                  </h3>
-                  <div class="mt-2 text-sm text-red-700 dark:text-red-300">
-                    <p>{{ error() }}</p>
-                  </div>
-                  <div class="mt-4">
-                    <button class="btn btn-primary" (click)="loadData()">Retry</button>
-                  </div>
-                </div>
+                  {{ showRepoRates() ? 'Hide' : 'Show' }} Repo Rates
+                </button>
+                <button
+                  (click)="toggleOrderBasketPanel()"
+                  class="flex items-center text-red-500 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13v8a2 2 0 002 2h10a2 2 0 002-2v-3"
+                    />
+                  </svg>
+                  Order Basket
+                </button>
               </div>
             </div>
           </div>
 
-          <div *ngIf="!loading() && !error()">
-            <dx-data-grid #grid
-              [dataSource]="positions()"
-              [height]="600"
-              [showBorders]="true"
-              [columnAutoWidth]="true"
-              [allowColumnReordering]="true"
-              [allowColumnResizing]="true"
-              [rowAlternationEnabled]="true"
-              selectTextOnEditStart="true"
-              [editing]="{
-                mode: 'cell',
-                allowUpdating: true,
-                allowAdding: true,
-                allowDeleting: false,
-                useIcons: true
-              }"
-
-              (onSaved)="onSaved()"                                       
-              (onRowInserted)="onRowInserted($event)"
-              (onRowUpdated)="onRowUpdated($event)"
-              (onEditingStart)="onEditingStart($event)"
-              (onEditingEnd)="onEditingEnd($event)"
-              (onCellPrepared)="onCellPrepared($event)"              
-            >
-              <!-- First 6 columns -->
-              <dxi-column
-                dataField="securityId"
-                caption="Security ID"
-                dataType="string"
-              ></dxi-column>
-              
-              <dxi-column
-                dataField="securityName"
-                caption="Security Description"
-                dataType="string"
-                editCellTemplate="securityDescriptionDropDownBoxEditor"
-              >
-              </dxi-column>
-              
-              <dxi-column
-                dataField="counterpartyId"
-                caption="Counterparty"
-                [lookup]="{ dataSource: counterparties, valueExpr: 'id', displayExpr: 'name' }"
-              >
-              </dxi-column>
-              
-              <dxi-column
-                dataField="collateralTypeId"
-                caption="Collateral Type"
-                [lookup]="{ dataSource: collateralTypes, valueExpr: 'id', displayExpr: 'name' }"
-              >
-              </dxi-column>
-              
-              <dxi-column
-                dataField="rate"
-                caption="Rate (%)"
-                dataType="number"
-                format="#.0####"
-              ></dxi-column>
-              
-              <dxi-column
-                dataField="variance"
-                caption="Variance"
-                dataType="number"
-                format="$ #,##0.0,'M'"
-              ></dxi-column>
-
-              <!-- Dynamic Fund Column Bands -->
-              <dxi-column *ngFor="let fund of funds()" [caption]="fund.fundName" [alignment]="'center'">
-                <dxi-column
-                  [dataField]="'fundNotionals.' + fund.id"
-                  caption="Notional"
-                  dataType="number"
-                  format="$ #,##0.0"                  
-                  [allowEditing]="true"
-                ></dxi-column>
-                <dxi-column
-                  [dataField]="'fundExposurePercents.' + fund.id + '.exposure'"
-                  caption="Exposure %"
-                  dataType="number"
-                  format="#0.0'%'"
-                  [allowEditing]="true"
-                ></dxi-column>
-                <dxi-column
-                  [dataField]="'fundStatuses.' + fund.id + '.status'"
-                  caption="Status"
-                  dataType="string"
-                  [allowEditing]="true"
-                ></dxi-column>
-              </dxi-column>
-
-              <dxo-load-panel [enabled]="loading()"> </dxo-load-panel>
-              
-              <!-- Security Description Lookup Template -->
-              <div *dxTemplate="let cellInfo of 'securityDescriptionDropDownBoxEditor'">
-                <dx-drop-down-box
-                  [dataSource]="repoRateStore.rates()"
-                  [(value)]="cellInfo.value"
-                  valueExpr="id"
-                  displayExpr="counterpartyName + ' - ' + collateralTypeName"
-                  [dropDownOptions]="{ width: 600 }"
-                  [inputAttr]="{ 'aria-label': 'Security Description' }"
-                  contentTemplate="securityDescriptionContentTemplate"
-                >
-                  <div *dxTemplate="let e of 'securityDescriptionContentTemplate'">
-                    <dx-data-grid
-                      [dataSource]="repoRateStore.rates()"
-                      [height]="300"
-                      [keyExpr]="'id'"
-                      [selection]="{ mode: 'single' }"
-                      [focusedRowEnabled]="true"
-                      [focusedRowKey]="cellInfo.value"
-                      [hoverStateEnabled]="true"
-                      (onContextMenuPreparing)="$event.items = []"
-                      (onSelectionChanged)="onRepoRateSelectionChanged($event, cellInfo, e.component)"
+          <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+            <div class="px-4 py-6">
+              <!-- Fund Balances Table -->
+              <div class="mb-6">
+                <h2 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-3">
+                  Fund Balances
+                </h2>
+                <div class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-800">
+                      <tr>
+                        <th
+                          class="px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                        >
+                          Fund
+                        </th>
+                        <th
+                          class="px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                        >
+                          Available Cash
+                        </th>
+                        <th
+                          class="px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                        >
+                          Currency
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody
+                      class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700"
                     >
-                      <dxi-column dataField="counterpartyName" caption="Counterparty" width="150"></dxi-column>
-                      <dxi-column dataField="collateralTypeName" caption="Collateral Type" width="150"></dxi-column>
-                      <dxi-column dataField="repoRate" caption="Rate (%)" width="80" format="#0.0##"></dxi-column>
-                      <dxi-column dataField="targetCircle" caption="Target Circle" width="120" format="$ #,##0.0,'M'"></dxi-column>
-                      <dxi-column dataField="finalCircle" caption="Final Circle" width="120" format="$ #,##0.0,'M'"></dxi-column>
-                      <dxi-column dataField="securityDescription" caption="Security Description" width="200"></dxi-column>
-                    </dx-data-grid>
-                  </div>
-                </dx-drop-down-box>
+                      <tr *ngFor="let balance of fundBalStore.balances()">
+                        <td class="px-4 text-sm text-gray-900 dark:text-gray-100">
+                          {{ getFundName(balance.fundId!) }}
+                        </td>
+                        <td class="px-4 text-sm text-gray-900 dark:text-gray-100">
+                          {{ balance.availableCash | currency }}
+                        </td>
+                        <td class="px-4 text-sm text-gray-900 dark:text-gray-100">
+                          {{ balance.currencyCode }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </dx-data-grid>
+
+              <div *ngIf="error()" class="p-6">
+                <div class="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
+                  <div class="flex">
+                    <div class="flex-shrink-0">
+                      <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                          fill-rule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                          clip-rule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <div class="ml-3">
+                      <h3 class="text-sm font-medium text-red-800 dark:text-red-200">
+                        Error loading data
+                      </h3>
+                      <div class="mt-2 text-sm text-red-700 dark:text-red-300">
+                        <p>{{ error() }}</p>
+                      </div>
+                      <div class="mt-4">
+                        <button class="btn btn-primary" (click)="loadData()">Retry</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div *ngIf="!loading() && !error()">
+                <dx-data-grid
+                  #grid
+                  class="dx-datagrid-rowsview"
+                  [dataSource]="positions()"
+                  [height]="600"
+                  [showBorders]="true"
+                  [columnAutoWidth]="true"
+                  [allowColumnReordering]="true"
+                  [allowColumnResizing]="true"
+                  [rowAlternationEnabled]="true"
+                  selectTextOnEditStart="true"
+                  [editing]="{
+                    mode: 'cell',
+                    allowUpdating: true,
+                    allowAdding: true,
+                    allowDeleting: false,
+                    useIcons: true,
+                    newRowPosition: 'last',
+                  }"
+                  (onRowInserted)="onRowInserted($event)"
+                  (onRowUpdated)="onRowUpdated($event)"
+                  (onEditingStart)="onEditingStart($event)"
+                  (onEditingCancelled)="onEditingCancelled($event)"
+                  (onEditingEnd)="onEditingEnd($event)"
+                  (onFocusedCellChanged)="onFocusedCellChanged($event)"
+                  (onCellPrepared)="onCellPrepared($event)"
+                >
+                  <!-- First 6 columns -->
+                  <dxi-column
+                    dataField="securityId"
+                    caption="Security ID"
+                    dataType="string"
+                  ></dxi-column>
+
+                  <dxi-column
+                    dataField="securityName"
+                    caption="Security Description"
+                    dataType="string"
+                    editCellTemplate="securityDescriptionDropDownBoxEditor"
+                  >
+                  </dxi-column>
+
+                  <dxi-column
+                    [allowEditing]="false"
+                    dataField="counterpartyId"
+                    caption="Counterparty"
+                    [lookup]="{ dataSource: counterparties, valueExpr: 'id', displayExpr: 'name' }"
+                  >
+                  </dxi-column>
+
+                  <dxi-column
+                    [allowEditing]="false"
+                    dataField="collateralTypeId"
+                    caption="Collateral Type"
+                    [lookup]="{ dataSource: collateralTypes, valueExpr: 'id', displayExpr: 'name' }"
+                  >
+                  </dxi-column>
+
+                  <dxi-column
+                    [allowEditing]="false"
+                    dataField="rate"
+                    caption="Rate (%)"
+                    dataType="number"
+                    format="#.0####"
+                  ></dxi-column>
+
+                  <dxi-column
+                    [allowEditing]="false"
+                    dataField="variance"
+                    caption="Variance"
+                    dataType="number"
+                    format="$ #,##0.0,'M'"
+                  ></dxi-column>
+
+                  <!-- Dynamic Fund Column Bands -->
+                  <dxi-column
+                    *ngFor="let fund of fundBalances"
+                    [caption]="fund.fundCode + ' | ' + fund.fundName"
+                    [alignment]="'center'"
+                  >
+                    <dxi-column
+                      [dataField]="'fundNotionals.' + fund.fundId"
+                      caption="Notional"
+                      dataType="number"
+                      format="$ #,##0.0"
+                      [allowEditing]="true"
+                    ></dxi-column>
+                    <dxi-column
+                      [dataField]="'fundExposurePercents.' + fund.fundId"
+                      caption="Exposure %"
+                      dataType="number"
+                      format="#0.0'%'"
+                      [allowEditing]="true"
+                    ></dxi-column>
+                    <dxi-column
+                      [dataField]="'fundStatuses.' + fund.fundId"
+                      caption="Status"
+                      dataType="string"
+                      [allowEditing]="true"
+                    ></dxi-column>
+                  </dxi-column>
+
+                  <dxo-load-panel [enabled]="loading()"> </dxo-load-panel>
+
+                  <!-- Security Description Lookup Template -->
+                  <div *dxTemplate="let cellInfo of 'securityDescriptionDropDownBoxEditor'">
+                    <dx-drop-down-box
+                      [dataSource]="repoRateStore.rates()"
+                      [value]="cellInfo.row.data"
+                      valueExpr="['collateralTypeId', 'counterpartyId']"
+                      displayExpr="counterpartyName + ' - ' + collateralTypeName"
+                      [dropDownOptions]="{ width: 600 }"
+                      [inputAttr]="{ 'aria-label': 'Security Description' }"
+                      contentTemplate="securityDescriptionContentTemplate"
+                    >
+                      <div *dxTemplate="let e of 'securityDescriptionContentTemplate'">
+                        <dx-data-grid
+                          [dataSource]="repoRateStore.rates()"
+                          [height]="300"
+                          [keyExpr]="['collateralTypeId', 'counterpartyId']"
+                          [selection]="{ mode: 'single' }"
+                          [focusedRowEnabled]="true"
+                          [focusedRowKey]="[
+                            cellInfo.row.data.collateralTypeId,
+                            cellInfo.row.data.counterpartyId,
+                          ]"
+                          [hoverStateEnabled]="true"
+                          (onContextMenuPreparing)="$event.items = []"
+                          (onSelectionChanged)="
+                            onRepoRateSelectionChanged($event, cellInfo, e.component)
+                          "
+                        >
+                          <dxi-column
+                            dataField="counterpartyName"
+                            caption="Counterparty"
+                            width="150"
+                          ></dxi-column>
+                          <dxi-column
+                            dataField="collateralTypeName"
+                            caption="Collateral Type"
+                            width="150"
+                          ></dxi-column>
+                          <dxi-column
+                            dataField="repoRate"
+                            caption="Rate (%)"
+                            width="80"
+                            format="#0.0##"
+                          ></dxi-column>
+                          <dxi-column
+                            dataField="targetCircle"
+                            caption="Target Circle"
+                            width="120"
+                            format="$ #,##0.0,'M'"
+                          ></dxi-column>
+                          <dxi-column
+                            dataField="finalCircle"
+                            caption="Final Circle"
+                            width="120"
+                            format="$ #,##0.0,'M'"
+                          ></dxi-column>
+                          <dxi-column
+                            dataField="securityDescription"
+                            caption="Security Description"
+                            width="200"
+                          ></dxi-column>
+                        </dx-data-grid>
+                      </div>
+                    </dx-drop-down-box>
+                  </div>
+                </dx-data-grid>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Add the slide-out panel -->
+  <div *ngIf="showOrderBasketPanel()" class="fixed inset-0 z-50 flex justify-end">
+    <!-- Backdrop to close the panel -->
+    <div class="absolute inset-0 bg-black bg-opacity-50" (click)="closeOrderBasketPanel()"></div>
+
+    <!-- Animated panel container -->
+    <div
+      class="relative w-1/2 h-full bg-white dark:bg-gray-800 shadow-lg overflow-y-auto transition-transform duration-300 ease-in-out"
+      [class.transform]="showOrderBasketPanel()"
+      [class.translate-x-0]="showOrderBasketPanel()"
+      [class.translate-x-full]="!showOrderBasketPanel()"
+    >
+      <!-- Close button inside the panel -->
+      <button
+        (click)="closeOrderBasketPanel()"
+        class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+        aria-label="Close panel"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+
+      <!-- Embed the OrderBasket component -->
+      <app-order-basket></app-order-basket>
     </div>
   </div>
 </div>

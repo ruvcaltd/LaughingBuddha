@@ -45,8 +45,8 @@ export const RepoRatesStore = signalStore(
     addToCircle(counterpartyId: number, collateralTypeId: number, notionalAmount: number) {
       const updatedRates = state.rates().map(rate => {
         if (rate.counterpartyId === counterpartyId && rate.collateralTypeId === collateralTypeId) {
-          const newBal = (rate.finalCircle || 0) * 1000000 + Math.abs(notionalAmount);
-          return { ...rate, finalCircle: newBal/1000000 };
+          const newBal = (rate.finalCircle || 0) + Math.abs(notionalAmount);
+          return { ...rate, finalCircle: newBal };
         }
         return rate;
       });
