@@ -11,6 +11,9 @@ using LAF.Service.Interfaces.Services;
 using LAF.Service.Interfaces.Repositories;
 using LAF.Services.Repositories;
 using LAF.WebApi.Hubs;
+using Microsoft.Identity.Web;
+using LAF.WebApi.Authorization;
+using Microsoft.AspNetCore.Authorization;
 
 public class Program
 {
@@ -20,6 +23,10 @@ public class Program
 
         // Get JWT settings from configuration
         var jwtKey = builder.Configuration["JwtSettings:SecretKey"];
+
+        // Get Azure AD settings from configuration
+        var azureAdClientId = builder.Configuration["AzureAd:ClientId"];
+        var azureAdTenantId = builder.Configuration["AzureAd:TenantId"];
 
         // Add services to the container.
         builder.Services.AddDbContext<LAFDbContext>(options =>
@@ -43,13 +50,13 @@ public class Program
         builder.Services.AddScoped<ITargetCircleService, TargetCircleService>();
         builder.Services.AddScoped<ICashManagementService, CashManagementService>();
         builder.Services.AddScoped<ISecurityService, SecurityService>();
-        // JWT Authentication
+        // Dual Authentication - JWT and Azure AD
         builder.Services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
         })
-        .AddJwtBearer(options =>
+        .AddJwtBearer("JwtScheme", options =>
         {
             options.TokenValidationParameters = new TokenValidationParameters
             {
@@ -67,7 +74,7 @@ public class Program
                 OnAuthenticationFailed = context =>
                 {
                     var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                    logger.LogError("Authentication failed: {Error}", context.Exception);
+                    logger.LogError("JWT Authentication failed: {Error}", context.Exception);
 
                     if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
                     {
@@ -78,17 +85,48 @@ public class Program
                 OnTokenValidated = context =>
                 {
                     var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                    logger.LogInformation("Token validated successfully");
+                    logger.LogInformation("JWT Token validated successfully");
                     return Task.CompletedTask;
                 },
                 OnMessageReceived = context =>
                 {
                     var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                    logger.LogInformation("Token received: {Token}", context.Token);
+                    logger.LogInformation("JWT Token received: {Token}", context.Token);
                     return Task.CompletedTask;
                 }
             };
-        });
+        })
+        .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"), "AzureAdScheme");
+
+        // Add Azure AD authentication if configured
+        if (!string.IsNullOrEmpty(azureAdClientId) && !string.IsNullOrEmpty(azureAdTenantId))
+        {
+            // Microsoft.Identity.Web already configured the Azure AD scheme above
+            builder.Services.Configure<JwtBearerOptions>("AzureAdScheme", options =>
+            {
+                options.Events = new JwtBearerEvents
+                {
+                    OnAuthenticationFailed = context =>
+                    {
+                        var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                        logger.LogError("Azure AD Authentication failed: {Error}", context.Exception);
+                        return Task.CompletedTask;
+                    },
+                    OnTokenValidated = context =>
+                    {
+                        var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                        logger.LogInformation("Azure AD Token validated successfully");
+                        return Task.CompletedTask;
+                    },
+                    OnMessageReceived = context =>
+                    {
+                        var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                        logger.LogInformation("Azure AD Token received: {Token}", context.Token);
+                        return Task.CompletedTask;
+                    }
+                };
+            });
+        }
 
         // Add CORS - Allow specific origins for development with credentials
         builder.Services.AddCors(options =>
@@ -107,6 +145,26 @@ public class Program
         });
 
         builder.Services.AddControllers();
+
+        // Add dual authorization policy
+        builder.Services.AddAuthorization(options =>
+        {
+            // Default policy that accepts both JWT and Azure AD
+            options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .AddAuthenticationSchemes("JwtScheme", "AzureAdScheme")
+                .Build();
+
+            // Explicit dual auth policy
+            options.AddPolicy("DualAuth", policy =>
+            {
+                policy.RequireAuthenticatedUser()
+                      .AddAuthenticationSchemes("JwtScheme", "AzureAdScheme");
+            });
+        });
+
+        // Register the dual auth handler
+        builder.Services.AddScoped<IAuthorizationHandler, DualAuthHandler>();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSignalR(options =>
         {
@@ -132,6 +190,16 @@ public class Program
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
                 Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+                Name = "Authorization",
+                In = ParameterLocation.Header,
+                Type = SecuritySchemeType.ApiKey,
+                Scheme = "Bearer"
+            });
+
+            // Add Azure AD Authentication
+            options.AddSecurityDefinition("AzureAD", new OpenApiSecurityScheme
+            {
+                Description = "Azure AD JWT Bearer token. Example: \"Authorization: Bearer {token}\"",
                 Name = "Authorization",
                 In = ParameterLocation.Header,
                 Type = SecuritySchemeType.ApiKey,

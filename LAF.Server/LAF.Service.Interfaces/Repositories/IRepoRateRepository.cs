@@ -18,5 +18,6 @@ namespace LAF.Service.Interfaces.Repositories
         Task<IEnumerable<RepoRate>> GetRepoRatesByCounterpartyAsync(int counterpartyId);
         Task<IEnumerable<RepoRate>> GetRepoRatesByDateRangeAsync(DateTime fromDate, DateTime toDate);
         Task<bool> RepoRateExistsAsync(int counterpartyId, int collateralTypeId, DateTime repoDate);
+        Task UpdateFinalCircle(int counterpartyId, int collateralTypeId, DateTime startDate, decimal proposedNotional);
     }
 }

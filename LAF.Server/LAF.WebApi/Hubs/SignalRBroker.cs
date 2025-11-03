@@ -28,5 +28,6 @@ namespace LAF.WebApi.Hubs
         public const string NewTrade = nameof(NewTrade);
         public const string CashflowCreated = nameof(CashflowCreated);
         public const string CashflowDeleted = nameof(CashflowDeleted);
+        public const string RepoCircleUpdated = nameof(RepoCircleUpdated);
     }
 }

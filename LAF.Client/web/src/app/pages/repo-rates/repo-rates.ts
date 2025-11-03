@@ -1,5 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, Input, OnInit, computed, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  Input,
+  OnDestroy,
+  OnInit,
+  computed,
+  inject,
+} from '@angular/core';
 import {
   DxDataGridModule,
   DxDropDownBoxComponent,
@@ -16,6 +24,7 @@ import {
   RepoRatesClient,
   UpdateRepoRateDto,
 } from '../../api/client';
+import { SignalRService } from '../../services/signalr.service';
 import { ThemeService } from '../../services/theme.service';
 import { ToastService } from '../../services/toast.service';
 import { ToastComponent } from '../../shared/toast/toast.component';
@@ -26,7 +35,6 @@ import { SharedStore } from '../../store/shared/shared.store';
 
 export interface IRepoRateGridItem extends IRepoRateDto {
   previousDayCircle?: number;
-  variance?: number;
 }
 
 @Component({
@@ -42,7 +50,13 @@ export interface IRepoRateGridItem extends IRepoRateDto {
   providers: [DxTemplateHost],
   templateUrl: './repo-rates.html',
 })
-export class RepoRates implements OnInit {
+export class RepoRates implements OnInit, OnDestroy {
+  async ngOnDestroy(): Promise<void> {
+    this.signalRService.off('PositionChanged');
+    this.signalRService.off('NewTrade');
+    this.signalRService.off('PositionCellEditing');
+  }
+
   private repoRateApiClient = inject(RepoRatesClient);
   private fundsApiClient = inject(FundsClient);
   private repoRatesStore = inject(RepoRatesStore);
@@ -51,6 +65,7 @@ export class RepoRates implements OnInit {
   private themeService = inject(ThemeService);
   private toastService = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
+  private signalRService = inject(SignalRService);
 
   @Input() embeddedView: boolean = false;
 
@@ -98,6 +113,16 @@ export class RepoRates implements OnInit {
     this.repoRatesStore.setSelectedDate(new Date());
     await Promise.all([this.counterpartyStore.loadAll(), this.collateralTypeStore.loadAll()]);
     await this.loadData();
+    this.subscribeToSignalR();
+  }
+
+  private subscribeToSignalR(): void {
+    this.signalRService.on(
+      'RepoCircleUpdated',
+      (_change: { sender: number; payload: IRepoRateDto }) => {
+        this.repoRatesStore.update(_change.payload);
+      },
+    );
   }
 
   public getActiveRatesCount(): number {
@@ -127,6 +152,10 @@ export class RepoRates implements OnInit {
     }
   }
 
+  calculateVariance(rowData: any): number {
+    return rowData.targetCircle - rowData.finalCircle;
+  }
+
   async loadRepoRatesForDate(date: Date): Promise<void> {
     try {
       if (
@@ -142,7 +171,6 @@ export class RepoRates implements OnInit {
         )) as IRepoRateGridItem[];
         const repoRatesPreviousDay = await firstValueFrom(this.repoRateApiClient.previousDay(date));
         for (const rate of repoRates) {
-          rate.variance = rate.finalCircle! - rate.targetCircle!;
           const prev = repoRatesPreviousDay.find(
             (r) =>
               r.collateralTypeId === rate.collateralTypeId &&
@@ -236,9 +264,9 @@ export class RepoRates implements OnInit {
   }
 
   // Date change handler updates store
-  public onDateChange(date: Date) {
+  public async onDateChange(date: Date) {
     this.repoRatesStore.setSelectedDate(date);
-    this.loadData();
+    await this.loadData();
   }
 
   public async onNewDay() {

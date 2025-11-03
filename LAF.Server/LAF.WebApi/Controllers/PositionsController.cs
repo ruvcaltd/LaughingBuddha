@@ -2,6 +2,7 @@ using LAF.DataAccess.Models;
 using LAF.Dtos;
 using LAF.Service.Interfaces.Repositories;
 using LAF.Service.Interfaces.Services;
+using LAF.Services.Mappers;
 using LAF.Services.Services;
 using LAF.WebApi.Hubs;
 using Microsoft.AspNetCore.Authorization;
@@ -110,7 +111,11 @@ namespace LAF.WebApi.Controllers
                 // calculate the new position based on the trades and the new notional amount
                 var tradeNotional = positionChange.NewNotionalAmount - trades.Sum(t => t.Notional);
 
-                if (tradeNotional == 0) return Ok(positionChange); // no change needed
+                if (tradeNotional == 0)
+                {
+                    positionChange.Status = "NoChange";
+                    return Ok(positionChange); // no change needed
+                }
 
                 // place a draft trade with the new position
                 var newTrade = new CreateRepoTradeDto
@@ -142,6 +147,13 @@ namespace LAF.WebApi.Controllers
                         await hub.SendToAll(SignalRBrokerMessages.PositionChanged, new SignalRBrokerMessages<PositionDto>(userId, position));
                     await hub.SendToAll(SignalRBrokerMessages.NewTrade, new SignalRBrokerMessages<RepoTradeDto>(userId, trade));
 
+
+                    var repoRate = await _repoRateRepository.FindAsync(rr =>
+                        rr.CounterpartyId == positionChange.CounterpartyId && rr.CollateralTypeId == positionChange.CollateralTypeId && rr.EffectiveDate == newTrade.StartDate.Date);
+
+                    await hub.SendToAll(SignalRBrokerMessages.RepoCircleUpdated, new SignalRBrokerMessages<RepoRateDto>(userId, RepoRateMapper.ToDto(repoRate.First())));
+
+                    positionChange.NewVariance = repoRate.FirstOrDefault()?.TargetCircle ?? 0 - repoRate.FirstOrDefault()?.TargetCircle ?? 0;
                     positionChange.Status = "Success";
                 }
                 catch (InvalidOperationException e)
@@ -206,6 +218,7 @@ namespace LAF.WebApi.Controllers
                         SecurityName = g.First().SecurityName,
                         SecurityMaturityDate = g.First().Security?.MaturityDate?.Date ?? DateTime.Today.AddDays(1), //TODO: adjust as needed
                         Variance = rates.Where(r => r.CollateralTypeId == g.Key.CollateralTypeId && r.CounterpartyId == g.Key.CounterpartyId).Sum(x => x.TargetCircle) - g.Sum(t => t.Notional),
+                        Rate = rates.First(r => r.CollateralTypeId == g.Key.CollateralTypeId && r.CounterpartyId == g.Key.CounterpartyId).RepoRate1,
                         // Group by fund to get fund-specific notionals and statuses
                         FundNotionals = g.GroupBy(t => t.FundId)
                             .ToDictionary(

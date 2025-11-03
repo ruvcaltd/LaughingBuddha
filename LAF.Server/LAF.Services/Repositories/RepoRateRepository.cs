@@ -115,5 +115,15 @@ namespace LAF.Services.Repositories
                 rr.CollateralTypeId == collateralTypeId &&
                 rr.EffectiveDate == repoDate);
         }
+
+        public async Task UpdateFinalCircle(int counterpartyId, int collateralTypeId, DateTime startDate, decimal proposedNotional)
+        {
+            var circle = await this.FindAsync(r => r.CounterpartyId == counterpartyId
+                        && r.CollateralTypeId == collateralTypeId
+                        && r.EffectiveDate.Date == startDate.Date);
+
+            circle.First().FinalCircle = proposedNotional;
+            await _context.SaveChangesAsync();
+        }
     }
 }

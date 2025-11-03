@@ -8,6 +8,7 @@
         public string CounterpartyName { get; set; } = string.Empty;
         public int SecurityId { get; set; }
         public decimal Variance { get; set; }
+        public decimal Rate { get; set; }
         public string SecurityName { get; set; } = string.Empty;
         public DateTime SecurityMaturityDate { get; set; }
         public Dictionary<int, decimal> FundNotionals { get; set; } = new Dictionary<int, decimal>();

@@ -90,7 +90,7 @@ namespace LAF.Services.Repositories
         public async Task<decimal> GetTotalNotionalByCounterpartyCollateralTypeAndDateAsync(int counterpartyId, int collateralTypeId, DateTime tradeDate)
         {
             return await _context.RepoTrades
-                .Where(rt => rt.CounterpartyId == counterpartyId && rt.CollateralTypeId == collateralTypeId && rt.StartDate <= tradeDate && rt.MaturityDate >= tradeDate)
+                .Where(rt => rt.CounterpartyId == counterpartyId && rt.CollateralTypeId == collateralTypeId && rt.StartDate == tradeDate.Date)
                 .SumAsync(rt => rt.Notional);
         }
 

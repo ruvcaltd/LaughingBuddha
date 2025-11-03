@@ -188,7 +188,7 @@ export class PositionsView implements OnInit, OnDestroy {
       await Promise.all([
         this.loadRepoRates(selectedDate),
         this.loadFundBalances(selectedDate),
-        this.loadPositions(selectedDate),
+        this.loadPositions(selectedDate, false),
       ]);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -223,8 +223,8 @@ export class PositionsView implements OnInit, OnDestroy {
     }
   }
 
-  async loadPositions(date: Date): Promise<void> {
-    if (this.positionsStore.positions().length > 0) {
+  async loadPositions(date: Date, force: boolean): Promise<void> {
+    if (!force && this.positionsStore.positions().length > 0) {
       return;
     }
 
@@ -236,8 +236,10 @@ export class PositionsView implements OnInit, OnDestroy {
         fundNotionals: pos.fundNotionals,
         fundExposurePercents: pos.exposurePercentages,
         fundStatuses: pos.statuses,
+        rate: pos.rate,
         locked: {},
         lockedBy: {},
+        error: {},
         commitStatus: {},
       }));
       this.positionsStore.setPositions(tradesWithExtensions);
@@ -353,7 +355,6 @@ export class PositionsView implements OnInit, OnDestroy {
         collateralTypeId: trade.collateralTypeId,
         counterpartyId: trade.counterpartyId,
         newNotionalAmount: newNotional,
-        status: 'Draft',
         securityMaturityDate: new Date(new Date().setDate(this.selectedDate().getDate() + 1)),
       };
 
@@ -363,12 +364,17 @@ export class PositionsView implements OnInit, OnDestroy {
 
       console.log(pos);
 
+      if (pos.status === 'NoChange') {
+        this.toastService.showInfo(`No changes detected for ${this.getFundName(fundId)}`);
+      }
+
       if (pos.status === 'Success') {
         this.toastService.showSuccess(`Draft trades created for ${this.getFundName(fundId)}`);
-        await this.loadPositions(this.selectedDate());
+        await this.loadPositions(this.selectedDate(), true);
         this.fundBalStore.loadAll(this.selectedDate());
       } else {
         this.toastService.showError(`Failed to create draft trades: ${pos.errorMessage}`);
+        this.positionsStore.updateError(trade, fundId.toString(), pos.errorMessage);
       }
 
       this.cd.detectChanges();
@@ -465,6 +471,7 @@ export class PositionsView implements OnInit, OnDestroy {
       const parts = dataField.split('.');
       const fundId = Number(parts[1]);
       const isLocked = !!e.data?.locked?.[fundId];
+      const hasError = e.data?.error?.[fundId];
       const columnAllowEditing = e.column.allowEditing;
       const isAllowedByColumn = typeof columnAllowEditing === 'boolean' ? columnAllowEditing : true;
 
@@ -476,6 +483,14 @@ export class PositionsView implements OnInit, OnDestroy {
         );
       } else if (isAllowedByColumn && !isLocked) {
         e.cellElement.classList.remove('cell-locked');
+        e.cellElement.removeAttribute('title');
+      }
+
+      if (hasError) {
+        e.cellElement.classList.add('cell-error');
+        e.cellElement.setAttribute('title', e.data?.error?.[fundId]);
+      } else {
+        e.cellElement.classList.remove('cell-error');
         e.cellElement.removeAttribute('title');
       }
     } catch (err) {

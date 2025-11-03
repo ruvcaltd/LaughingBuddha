@@ -37,6 +37,7 @@
     "@angular/forms": "^20.3.0",
     "@angular/platform-browser": "^20.3.0",
     "@angular/router": "^20.3.0",
+    "@azure/msal-angular": "^4.0.21",
     "@microsoft/signalr": "^9.0.6",
     "@ngrx/effects": "^20.0.1",
     "@ngrx/signals": "^20.1.0",

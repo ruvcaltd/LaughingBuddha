@@ -95,6 +95,10 @@ namespace LAF.Services.Services
                 {
                     throw new InvalidOperationException(targetCircleValidation.ValidationMessage);
                 }
+                else // update the repo rate final circle with new proposed notional
+                {
+                    await _repoRateRepository.UpdateFinalCircle(createDto.CounterpartyId, createDto.CollateralTypeId, createDto.StartDate, targetCircleValidation.NewTotalExposure);
+                }
 
                 // Create the trade
                 var trade = RepoTradeMapper.ToEntity(createDto);
@@ -103,6 +107,7 @@ namespace LAF.Services.Services
 
                 // Create cashflow for trade settlement
                 await CreateTradeSettlementCashflow(trade);
+
 
                 await transaction.CommitAsync();
 
@@ -403,7 +408,7 @@ namespace LAF.Services.Services
 
                     await _repoTradeRepository.UpdateAsync(trade);
                     submittedTrades.Add(trade);
-                    
+
                     _logger.LogInformation($"Trade submitted successfully: TRD{trade.Id:D6}");
                 }
 

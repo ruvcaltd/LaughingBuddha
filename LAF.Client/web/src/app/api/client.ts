@@ -2612,6 +2612,7 @@ export class PositionChangeDto implements IPositionChangeDto {
     securityMaturityDate?: Date;
     fundId?: number;
     newNotionalAmount?: number;
+    newVariance?: number;
     status?: string | undefined;
     errorMessage?: string | undefined;
 
@@ -2632,6 +2633,7 @@ export class PositionChangeDto implements IPositionChangeDto {
             this.securityMaturityDate = _data["securityMaturityDate"] ? new Date(_data["securityMaturityDate"].toString()) : undefined as any;
             this.fundId = _data["fundId"];
             this.newNotionalAmount = _data["newNotionalAmount"];
+            this.newVariance = _data["newVariance"];
             this.status = _data["status"];
             this.errorMessage = _data["errorMessage"];
         }
@@ -2652,6 +2654,7 @@ export class PositionChangeDto implements IPositionChangeDto {
         data["securityMaturityDate"] = this.securityMaturityDate ? this.securityMaturityDate.toISOString() : undefined as any;
         data["fundId"] = this.fundId;
         data["newNotionalAmount"] = this.newNotionalAmount;
+        data["newVariance"] = this.newVariance;
         data["status"] = this.status;
         data["errorMessage"] = this.errorMessage;
         return data;
@@ -2665,6 +2668,7 @@ export interface IPositionChangeDto {
     securityMaturityDate?: Date;
     fundId?: number;
     newNotionalAmount?: number;
+    newVariance?: number;
     status?: string | undefined;
     errorMessage?: string | undefined;
 }
@@ -2676,6 +2680,7 @@ export class PositionDto implements IPositionDto {
     counterpartyName?: string | undefined;
     securityId?: number;
     variance?: number;
+    rate?: number;
     securityName?: string | undefined;
     securityMaturityDate?: Date;
     fundNotionals?: { [key: string]: number; } | undefined;
@@ -2700,6 +2705,7 @@ export class PositionDto implements IPositionDto {
             this.counterpartyName = _data["counterpartyName"];
             this.securityId = _data["securityId"];
             this.variance = _data["variance"];
+            this.rate = _data["rate"];
             this.securityName = _data["securityName"];
             this.securityMaturityDate = _data["securityMaturityDate"] ? new Date(_data["securityMaturityDate"].toString()) : undefined as any;
             if (_data["fundNotionals"]) {
@@ -2748,6 +2754,7 @@ export class PositionDto implements IPositionDto {
         data["counterpartyName"] = this.counterpartyName;
         data["securityId"] = this.securityId;
         data["variance"] = this.variance;
+        data["rate"] = this.rate;
         data["securityName"] = this.securityName;
         data["securityMaturityDate"] = this.securityMaturityDate ? this.securityMaturityDate.toISOString() : undefined as any;
         if (this.fundNotionals) {
@@ -2789,6 +2796,7 @@ export interface IPositionDto {
     counterpartyName?: string | undefined;
     securityId?: number;
     variance?: number;
+    rate?: number;
     securityName?: string | undefined;
     securityMaturityDate?: Date;
     fundNotionals?: { [key: string]: number; } | undefined;

@@ -14,6 +14,7 @@ namespace LAF.Dtos
         public DateTime SecurityMaturityDate { get; set; }
         public int FundId { get; set; }
         public decimal NewNotionalAmount { get; set; }
+        public decimal NewVariance { get; set; }
         public string Status { get; set; } = "Pending"; // or "Success" or "Failed"
 
         public string? ErrorMessage { get; set; }

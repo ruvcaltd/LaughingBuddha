@@ -1,5 +1,5 @@
 export const environment = {
-  production: false,
+  production: true,
   apiUrl: 'https://localhost:7202',
   signalRHubUrl: 'https://localhost:7202/hubs/laf',
   auth: {

@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthClient, AuthenticationRequest } from '../api/client';
+import { AuthConfigService } from './auth-config.service';
+import { EntraAuthService } from './entra-auth.service';
 
 export interface LoginCredentials {
   email: string;
@@ -12,6 +14,7 @@ export interface LoginResult {
   success: boolean;
   token?: string;
   error?: string;
+  authMethod?: 'jwt' | 'entra';
 }
 
 @Injectable({
@@ -22,19 +25,25 @@ export class AuthService {
   private emailKey = 'laf_user_email';
   private displayNameKey = 'laf_user_display_name';
   private userIdKey = 'laf_user_id';
+  private authMethodKey = 'laf_auth_method';
   private currentToken: string | null = null;
   private currentEmail: string | null = null;
   private currentDisplayName: string | null = null;
   private currentUserId: number | null = null;
+  private currentAuthMethod: 'jwt' | 'entra' | null = null;
 
   constructor(
     private httpClient: AuthClient,
     private router: Router,
+    private entraAuthService: EntraAuthService,
+    private authConfigService: AuthConfigService,
   ) {
     this.currentToken = localStorage.getItem(this.tokenKey);
     this.currentEmail = localStorage.getItem(this.emailKey);
     this.currentDisplayName = localStorage.getItem(this.displayNameKey);
     this.currentUserId = +(localStorage.getItem(this.userIdKey) || '0');
+    const authMethod = localStorage.getItem(this.authMethodKey);
+    this.currentAuthMethod = authMethod as 'jwt' | 'entra' | null;
   }
 
   async login(email: string, password: string): Promise<LoginResult> {
@@ -47,6 +56,7 @@ export class AuthService {
 
       if (response.token) {
         this.setToken(response.token);
+        this.setAuthMethod('jwt');
         if (response.email) {
           this.setEmail(response.email);
         }
@@ -56,7 +66,7 @@ export class AuthService {
         if (response.userId) {
           this.setUserId(response.userId);
         }
-        return { success: true, token: response.token };
+        return { success: true, token: response.token, authMethod: 'jwt' };
       } else {
         return { success: false, error: 'Invalid credentials' };
       }
@@ -69,11 +79,66 @@ export class AuthService {
     }
   }
 
+  async loginWithEntra(): Promise<LoginResult> {
+    if (!this.authConfigService.isEntraAuthEnabled()) {
+      return {
+        success: false,
+        error: 'Microsoft Entra authentication is not enabled',
+      };
+    }
+
+    try {
+      const result = await this.entraAuthService.loginPopup().toPromise();
+      if (result) {
+        const accessToken = result.accessToken;
+        this.setToken(accessToken);
+        this.setAuthMethod('entra');
+
+        const account = this.entraAuthService.getCurrentUser();
+        if (account) {
+          this.setEmail(account.username);
+          this.setDisplayName(account.name || '');
+        }
+
+        return { success: true, token: accessToken, authMethod: 'entra' };
+      }
+      return { success: false, error: 'Entra login failed' };
+    } catch (error: any) {
+      console.error('Entra login error:', error);
+
+      // If Entra login fails and JWT fallback is enabled, suggest fallback
+      if (this.authConfigService.isJwtFallbackEnabled()) {
+        return {
+          success: false,
+          error: 'Microsoft login failed. Please use email/password login instead.',
+        };
+      }
+
+      return {
+        success: false,
+        error: error.message || 'Entra login failed. Please try again.',
+      };
+    }
+  }
+
+  async loginWithEntraRedirect() {
+    if (!this.authConfigService.isEntraAuthEnabled()) {
+      throw new Error('Microsoft Entra authentication is not enabled');
+    }
+
+    console.log('AuthService: Starting Entra redirect login...');
+    await this.entraAuthService.loginRedirect();
+  }
+
   logout(): void {
+    if (this.currentAuthMethod === 'entra') {
+      this.entraAuthService.logout();
+    }
     this.clearToken();
     this.clearEmail();
     this.clearDisplayName();
     this.clearUserId();
+    this.clearAuthMethod();
     this.router.navigate(['/login']);
   }
 
@@ -145,5 +210,27 @@ export class AuthService {
       };
     }
     return {};
+  }
+
+  getAuthMethod(): 'jwt' | 'entra' | null {
+    return this.currentAuthMethod;
+  }
+
+  setAuthMethod(method: 'jwt' | 'entra'): void {
+    this.currentAuthMethod = method;
+    localStorage.setItem(this.authMethodKey, method);
+  }
+
+  clearAuthMethod(): void {
+    this.currentAuthMethod = null;
+    localStorage.removeItem(this.authMethodKey);
+  }
+
+  isEntraAuthenticated(): boolean {
+    return this.currentAuthMethod === 'entra' && this.isAuthenticated();
+  }
+
+  isJwtAuthenticated(): boolean {
+    return this.currentAuthMethod === 'jwt' && this.isAuthenticated();
   }
 }

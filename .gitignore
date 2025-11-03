@@ -3,3 +3,11 @@
 ################################################################################
 
 /LAF.Client/web/.vscode
+/LAF.Client/web/.env
+/LAF.Server/LAF.WebApi/.env
+/.claude
+/AZURE_AD_SETUP_GUIDE.md
+/ENTRA_AUTH_SETUP.md
+/MSAL_TROUBLESHOOTING.md
+/MSAL_V4_FINAL_SOLUTION.md
+/LAF.Client/node_modules
