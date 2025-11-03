@@ -11,3 +11,6 @@
 /MSAL_TROUBLESHOOTING.md
 /MSAL_V4_FINAL_SOLUTION.md
 /LAF.Client/node_modules
+/node_modules
+/LAF.Client2/dist
+/LAF.Client2/node_modules

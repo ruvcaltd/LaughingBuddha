@@ -1,0 +1,21 @@
+{
+  "runtime": "Default",
+  "documentGenerator": {
+    "fromDocument": {
+      "url": "https://localhost:7202/swagger/v1/swagger.json"
+    }
+  },
+  "codeGenerators": {
+    "openApiToTypeScriptClient": {
+      "className": "{controller}Client",
+      "type": "TypeScript",
+      "template": "Fetch",
+      "promiseType": "Promise",
+      "output": "src/api/client.ts",
+      "generateClientClasses": true,
+      "generateClientInterfaces": true,
+      "useAbortSignal": true,
+      "operationGenerationMode": "MultipleClientsFromFirstTagAndOperationId"
+    }
+  }
+}
