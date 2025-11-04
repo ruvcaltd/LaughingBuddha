@@ -1,0 +1,71 @@
+<!-- Add Cashflow Modal -->
+<div
+  *ngIf="show"
+  class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+  (click)="onCancel()"
+>
+  <div
+    class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full mx-4"
+    (click)="$event.stopPropagation()"
+  >
+    <h2 class="text-lg font-medium mb-4">Add New Cashflow</h2>
+    <form>
+      <div class="mb-4">
+        <label class="block text-sm font-medium">Amount</label>
+        <input
+          type="number"
+          [(ngModel)]="cashflow.amount"
+          name="amount"
+          class="form-control"
+        />
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium">Currency Code</label>
+        <input
+          type="text"
+          [(ngModel)]="cashflow.currencyCode"
+          name="currencyCode"
+          class="form-control"
+        />
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium">Cashflow Date</label>
+        <input
+          type="date"
+          [value]="cashflow.cashflowDate | date: 'yyyy-MM-dd'"
+          (change)="
+            $event.target.valueAsDate
+              ? (cashflow.cashflowDate = $event.target.valueAsDate)
+              : null
+          "
+          name="cashflowDate"
+          class="form-control"
+        />
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium">Description</label>
+        <input
+          type="text"
+          [(ngModel)]="cashflow.description"
+          name="description"
+          class="form-control"
+        />
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium">Source</label>
+        <input
+          type="text"
+          [(ngModel)]="cashflow.source"
+          name="source"
+          class="form-control"
+        />
+      </div>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" (click)="onSave()">Save</button>
+      </div>
+    </form>
+  </div>
+</div>

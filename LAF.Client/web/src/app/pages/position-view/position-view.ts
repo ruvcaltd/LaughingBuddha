@@ -19,6 +19,8 @@ import {
 import { CellPreparedEvent, RowUpdatedEvent, SelectionChangedEvent } from 'devextreme/ui/data_grid';
 import { debounceTime, firstValueFrom, Subject } from 'rxjs';
 import {
+  CashflowClient,
+  CreateCashflowDto,
   FundsClient,
   IPositionChangeDto,
   IPositionLockDto,
@@ -33,6 +35,7 @@ import { ToastComponent } from '../../shared/toast/toast.component';
 import { CollateralTypeStore } from '../../store/collateral-type/collateral-type.store';
 import { FundBalanceStore } from '../../store/fund-balances/fund-balance.store';
 import { ITradeBlotterGridItem, PositionsStore } from '../../store/positions/positions.store';
+import { AddCashflowDialogComponent } from '../../shared/add-cashflow-dialog/add-cashflow-dialog.component';
 import { OrderBasket } from '../order-basket/order-basket';
 import { RepoRates } from '../repo-rates/repo-rates';
 import { PositionLockDto } from './../../api/client';
@@ -50,6 +53,7 @@ import { RepoRatesStore } from './../../store/repo-rates/repo-rates.store';
     DxTemplateModule,
     OrderBasket,
     RepoRates,
+    AddCashflowDialogComponent,
   ],
   providers: [DxTemplateHost],
   templateUrl: './position-view.html',
@@ -58,6 +62,7 @@ export class PositionsView implements OnInit, OnDestroy {
   private repoRateApiClient = inject(RepoRatesClient);
   private positionsApiClient = inject(PositionsClient);
   private fundApiClient = inject(FundsClient);
+  private cashflowClient = inject(CashflowClient);
   private signalRService = inject(SignalRService);
   private counterpartyStore = inject(CounterpartyStore);
   private collateralTypeStore = inject(CollateralTypeStore);
@@ -77,6 +82,24 @@ export class PositionsView implements OnInit, OnDestroy {
 
   // Add signal for repo rates visibility
   showRepoRates = signal(this.getShowRepoRatesFromStorage());
+
+  // Signals for cashflow dialog
+  showAddCashflowPopup = signal(false);
+  newCashflow = signal<CreateCashflowDto>(
+    new CreateCashflowDto({
+      cashAccountId: undefined,
+      fundId: undefined,
+      amount: undefined,
+      currencyCode: undefined,
+      cashflowDate: new Date(),
+      description: undefined,
+      source: undefined,
+      createdByUserId: this.authService.getUserId() ?? undefined,
+    }),
+  );
+
+  // Funds with accounts
+  funds = signal<any[]>([]);
 
   public gridOptions = {
     editing: {
@@ -115,6 +138,7 @@ export class PositionsView implements OnInit, OnDestroy {
     await this.fundBalStore.loadAll(this.selectedDate());
     await this.counterpartyStore.loadAll();
     await this.collateralTypeStore.loadAll();
+    await this.loadFunds();
     await this.loadData();
     this.subscribeToSignalR();
 
@@ -219,6 +243,16 @@ export class PositionsView implements OnInit, OnDestroy {
       this.fundBalStore.setBalances(this.fundBalances);
     } catch (error) {
       console.error('Error loading fund balances:', error);
+      throw error;
+    }
+  }
+
+  async loadFunds(): Promise<void> {
+    try {
+      const fundsData = await firstValueFrom(this.cashflowClient.daily(new Date()));
+      this.funds.set(fundsData);
+    } catch (error) {
+      console.error('Error loading funds:', error);
       throw error;
     }
   }
@@ -509,6 +543,49 @@ export class PositionsView implements OnInit, OnDestroy {
     if (exposurePercent > 90) return 'High Risk';
     if (exposurePercent > 70) return 'Medium Risk';
     return 'Normal';
+  }
+
+  openAddCashflowPopup(balance: any): void {
+    const fund = this.funds().find((f) => f.fundId === balance.fundId);
+    if (!fund || !fund.accounts || fund.accounts.length === 0) {
+      this.toastService.showError('No cash accounts available for this fund.');
+      return;
+    }
+    const firstAccount = fund.accounts[0];
+    this.newCashflow.set(
+      new CreateCashflowDto({
+        ...this.newCashflow(),
+        fundId: balance.fundId,
+        cashAccountId: firstAccount.cashAccountId,
+        currencyCode: balance.currencyCode,
+        createdByUserId: this.authService.getUserId() ?? undefined,
+      }),
+    );
+    this.showAddCashflowPopup.set(true);
+  }
+
+  async saveNewCashflow(): Promise<void> {
+    try {
+      const newCashflow = this.newCashflow();
+      await firstValueFrom(this.cashflowClient.cashflowPOST(newCashflow));
+      this.toastService.showSuccess('Cashflow added successfully.');
+      this.showAddCashflowPopup.set(false);
+      // Optionally reload funds or balances
+      await this.loadFunds();
+      await this.fundBalStore.loadAll(this.selectedDate());
+    } catch (err) {
+      this.showAddCashflowPopup.set(false);
+      this.toastService.showError('Failed to add cashflow.');
+    }
+  }
+
+  onSaveCashflow(dto: CreateCashflowDto): void {
+    this.newCashflow.set(dto);
+    this.saveNewCashflow();
+  }
+
+  onCancelCashflow(): void {
+    this.showAddCashflowPopup.set(false);
   }
 
   getFundName(fundId: number): string {

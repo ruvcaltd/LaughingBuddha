@@ -16,10 +16,11 @@ import { SignalRService } from '../../services/signalr.service';
 import { ToastService } from '../../services/toast.service';
 import { ToastComponent } from '../../shared/toast/toast.component';
 import { SharedStore } from '../../store/shared/shared.store'; // Assuming this exists for currentUser
+import { AddCashflowDialogComponent } from '../../shared/add-cashflow-dialog/add-cashflow-dialog.component';
 
 @Component({
   selector: 'app-cashflows',
-  imports: [CommonModule, DxDataGridModule, FormsModule, ToastComponent, DxTemplateModule],
+  imports: [CommonModule, DxDataGridModule, FormsModule, ToastComponent, DxTemplateModule, AddCashflowDialogComponent],
   templateUrl: './cashflows.html',
 })
 export class Cashflows implements OnInit, OnDestroy {
@@ -220,5 +221,14 @@ export class Cashflows implements OnInit, OnDestroy {
       return;
     }
     await this.reloadGrid(this.selectedFund()!.fundId!, this.selectedCashAccount()!);
+  }
+
+  onSave(dto: CreateCashflowDto): void {
+    this.newCashflow.set(dto);
+    this.saveNewCashflow();
+  }
+
+  onCancel(): void {
+    this.closeAddPopup();
   }
 }
